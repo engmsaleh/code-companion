@@ -1,0 +1,49 @@
+html {
+  font-size: 15px;
+}
+
+.select-custom-width {
+  width: 160px;
+}
+
+pre {
+  min-height: 40px;
+  padding: 1rem;
+}
+
+.with-code-block {
+  overflow: auto;
+  position: relative;
+}
+
+.xterm {
+  padding: 1rem;
+}
+
+.autosize-textarea {
+  max-height: 30vh;
+  overflow-x: hidden !important;
+}
+
+#terminal_resize_handle {
+    height: 3px;
+}
+
+#terminal_resize_handle:hover {
+    background-color: var(--bs-link-hover-color);
+}
+
+
+@font-face {
+  font-family: "FiraCodeNerdFont";
+  src: url("./fonts/FiraCodeNerdFont-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "FiraCodeNerdFont";
+  src: url("./fonts/FiraCodeNerdFont-Bold.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+}
