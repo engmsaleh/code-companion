@@ -33,4 +33,8 @@ We welcome contributions from the community! Please read the `CONTRIBUTING.md` f
 
 This project is licensed under the MIT License - see the `LICENSE.md` file for details.
 
+## Links
+- [CodeCompanion.AI Website](https://codecompanion.ai/)
+- [Discord Community](https://discord.com/invite/qcTqDgqy6R)
+
 We hope you enjoy using CodeCompanion.AI and we look forward to seeing your contributions to the project!
