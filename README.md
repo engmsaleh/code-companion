@@ -1,36 +1,40 @@
 # CodeCompanion.AI
 
-Welcome to the CodeCompanion.AI application! This document provides you with the necessary information to get started with the application, contribute to its development, and understand its structure.
+Welcome to CodeCompanion.AI, your personal coding assistant that helps you translate natural language instructions into code. This document will guide you through setting up the application, understanding its structure, and contributing to its development.
 
-## Getting Started
+## Quick Start
 
-To get the application up and running on your local machine, follow these steps:
+Follow these steps to set up the application on your local machine:
 
-1. Clone the repository to your local machine.
-2. Navigate to the cloned directory.
-3. Run `npm install` to install all the required dependencies.
-4. Use `npm run start` to start the application.
-5. To start the application with the developer console open, use `npm run debug`.
+1. Clone the repository.
+2. Navigate to the project directory.
+3. Run `npm install` to install dependencies.
+4. Start the application with `npm start` or `npm run debug` for development mode.
 
-## Project Structure
+## Project Overview
 
-The project is structured as follows:
+Here's an overview of the project's directory structure:
 
-- `build/`: Contains compiled files ready for production.
-- `js/`: Contains JavaScript files for the application's logic.
-- `styles/`: Contains CSS files for styling the application.
-- `index.html`: The entry point for the application's user interface.
-- `main.js`: The main process of the Electron application.
-- `preload.js`: Script that runs before the renderer process.
-- `renderer.js`: The renderer process of the Electron application.
-- `scripts/`: Contains various scripts for development and building the application.
+- `build/`: Production-ready compiled files.
+- `js/`: Core application logic and functionality.
+- `styles/`: Styling and appearance of the application.
+- `index.html`: Main entry point for the UI.
+- `main.js`: Electron main process script.
+- `preload.js`: Pre-rendering script for the renderer process.
+- `renderer.js`: Electron renderer process script.
+- `scripts/`: Utility and build scripts.
 
 ## Contributing
 
-We welcome contributions from the community! Please read the `CONTRIBUTING.md` file for guidelines on how to make contributions.
+Contributions are welcome! Please refer to `CONTRIBUTING.md` for contribution guidelines.
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE.md` file for details.
+CodeCompanion.AI is open-source software licensed under the MIT License. See `LICENSE.md` for more information.
 
-We hope you enjoy using CodeCompanion.AI and we look forward to seeing your contributions to the project!
+## Community and Support
+
+- [Official Website](https://codecompanion.ai/)
+- [Join our Discord](https://discord.com/invite/qcTqDgqy6R)
+
+Thank you for using CodeCompanion.AI. Happy coding!
