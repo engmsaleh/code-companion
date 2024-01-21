@@ -198,8 +198,32 @@ function selectDirectory() {
 function saveApiKey() {
   const apiKey = document.getElementById('apiKey').value;
   settings.set('apiKey', apiKey);
-  chatController.openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true, maxRetries: chatController.MAX_RETRIES });
+  initializeOpenAIAPI();
   chatController.clearChat();
+}
+
+function saveBaseUrl() {
+  const baseUrl = document.getElementById('baseUrl').value;
+  settings.set('baseUrl', baseUrl);
+  initializeOpenAIAPI();
+  chatController.clearChat();
+}
+
+function initializeOpenAIAPI() {
+  const apiKey = settings.get('apiKey');
+  const baseUrl = settings.get('baseUrl');
+
+  const config = {
+    apiKey: apiKey,
+    dangerouslyAllowBrowser: true,
+    maxRetries: chatController.MAX_RETRIES,
+  };
+
+  if (baseUrl) {
+    config.baseUrl = baseUrl;
+  }
+
+  chatController.openai = new OpenAI(config);
 }
 
 function saveMaxTokensPerRequest() {
@@ -246,6 +270,7 @@ module.exports = {
   addCopyCodeButtons,
   scrollToBottom,
   saveApiKey,
+  saveBaseUrl,
   saveMaxTokensPerRequest,
   saveMaxTokensPerChat,
   openFileDialogue,
