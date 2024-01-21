@@ -143,6 +143,12 @@
           <input type="text" class="form-control" id="apiKey" placeholder="Your API Key" />
           <button class="btn btn-outline-secondary" type="button" id="saveApiKey" onclick="saveApiKey()">Save</button>
         </div>
+
+        <label for="apiKey" class="form-label mt-4">OpenAI Base URL:</label>
+        <div class="input-group">
+          <input type="text" class="form-control" id="baseUrl" placeholder="Optional. Enter your OpenAI endpoint URL here if different from default." />
+          <button class="btn btn-outline-secondary" type="button" id="saveBaseURL" onclick="saveBaseURL()">Save</button>
+        </div>
         
         <label for="maxTokensPerRequest" class="form-label mt-4">Max tokens per request:</label>
         <div class="input-group">

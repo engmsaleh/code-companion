@@ -18,6 +18,7 @@ const {
   onShow,
   updateLoadingIndicator,
   saveApiKey,
+  saveBaseUrl,
   saveMaxTokensPerRequest,
   saveMaxTokensPerChat,
   renderSystemMessage,
