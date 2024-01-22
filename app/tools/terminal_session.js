@@ -3,7 +3,6 @@ const fs = require('graceful-fs');
 const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
 const { WebLinksAddon } = require('xterm-addon-web-links');
-const { CanvasAddon } = require('xterm-addon-canvas');
 const { Unicode11Addon } = require('xterm-addon-unicode11');
 const interact = require('interactjs');
 const { ipcRenderer, shell } = require('electron');
@@ -68,7 +67,6 @@ class TerminalSession {
     });
 
     this.terminal.open(document.getElementById('terminal_output'));
-    // this.terminal.loadAddon(new CanvasAddon());
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(
       new WebLinksAddon((event, uri) => {

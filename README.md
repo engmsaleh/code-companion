@@ -3,8 +3,8 @@
 Welcome to CodeCompanion.AI, your personal coding assistant that helps you translate natural language instructions into code. This document will guide you through setting up the application, understanding its structure, and contributing to its development.
 
 ## Demo
-https://github.com/codecompanion-ai/code-companion/assets/156543223/9990e7a8-a1ca-4172-8370-9befd49c7b6b
 
+https://github.com/codecompanion-ai/code-companion/assets/156543223/9990e7a8-a1ca-4172-8370-9befd49c7b6b
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ Or if you want to contribute or make changes to the code, please follow the inst
 Here's an overview of the project's directory structure:
 
 - `build/`: Production-ready compiled files.
-- `js/`: Core application logic and functionality.
+- `app/`: Core application logic and functionality.
 - `styles/`: Styling and appearance of the application.
 - `index.html`: Main entry point for the UI.
 - `main.js`: Electron main process script.

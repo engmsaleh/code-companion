@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.20.0",
+  "version": "5.20.2",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -67,6 +67,8 @@
   },
   "dependencies": {
     "@aptabase/electron": "^0.3.1",
+    "@sentry/electron": "^4.7.0",
+    "@sentry/integrations": "^7.59.3",
     "@mozilla/readability": "^0.4.4",
     "@postlight/parser": "^2.2.3",
     "ag-grid-community": "^29.3.5",
@@ -98,7 +100,6 @@
     "read-chunk": "^3.2.0",
     "uuid": "^9.0.0",
     "xterm": "^5.2.1",
-    "xterm-addon-canvas": "^0.4.0",
     "xterm-addon-fit": "^0.7.0",
     "xterm-addon-unicode11": "^0.5.0",
     "xterm-addon-web-links": "^0.8.0"
