@@ -4,7 +4,7 @@ const modelOptions = {
   'gpt-3.5-turbo-1106': 'GPT-3.5',
 };
 
-const defaultModel = 'gpt-3.5-turbo-1106';
+const defaultModel = 'gpt-4-1106-preview';
 
 module.exports = {
   modelOptions,

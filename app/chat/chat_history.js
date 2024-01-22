@@ -20,43 +20,42 @@ class ChatHistory {
         currentId: chatController.chat.currentId,
         lastBackendMessageId: chatController.chat.lastBackendMessageId,
       },
-      workingDir: chatController.codeAgent.currentWorkingDir,
-      selectedModel: chatController.selectedModel,
+      workingDir: chatController.agent.currentWorkingDir,
+      selectedModel: chatController.settings.selectedModel,
     };
 
-    const chatHistory = settings.get('chatHistory', {});
+    const chatHistory = localStorage.get('chatHistory', {});
     chatHistory[id] = record;
-    settings.set('chatHistory', chatHistory);
+    localStorage.set('chatHistory', chatHistory);
     saveChatModal.hide();
-    renderSystemMessage('Chat saved.');
+    viewController.updateFooterMessage('Chat saved.');
   }
 
   delete(id) {
-    const chatHistory = settings.get('chatHistory', {});
+    const chatHistory = localStorage.get('chatHistory', {});
     delete chatHistory[id];
-    settings.set('chatHistory', chatHistory);
+    localStorage.set('chatHistory', chatHistory);
     this.load();
   }
 
   retrieveAll() {
-    const records = Object.values(settings.get('chatHistory', {}));
+    const records = Object.values(localStorage.get('chatHistory', {}));
     return records.sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 
   async restoreChat(id) {
-    const record = settings.get('chatHistory', {})[id];
+    const record = localStorage.get('chatHistory', {})[id];
     if (record) {
-      chatController.setModel(record.selectedModel);
-
+      chatController.saveSetting('selectedModel', record.selectedModel);
       Object.assign(chatController.chat, record.chat);
       chatController.chat.updateUI();
 
-      chatController.codeAgent.projectHandler.openProject(record.workingDir);
+      chatController.agent.projectController.openProject(record.workingDir);
     }
   }
 
   deleteAll() {
-    settings.set('chatHistory', {});
+    localStorage.set('chatHistory', {});
     this.load();
   }
 
@@ -95,7 +94,7 @@ class ChatHistory {
 
   showModal() {
     if (chatController.chat.isEmpty()) {
-      renderSystemMessage('Nothing to save.');
+      viewController.updateFooterMessage('Nothing to save.');
       return;
     }
     saveChatModal.show();

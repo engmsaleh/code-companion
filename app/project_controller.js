@@ -3,16 +3,15 @@ const CryptoJS = require('crypto-js');
 const pathModule = require('path');
 const Store = require('electron-store');
 const ignore = require('ignore');
-const ccignoreTemplate = require('./static/ccignore_template');
-const CodeEmbeddings = require('./code_embeddings');
+const ccignoreTemplate = require('./static/embeddings_ignore_patterns');
+const CodeEmbeddings = require('./tools/code_embeddings');
 
 const LARGE_FILE_SIZE = 100000;
 const EMBEDDINGS_VERSION = 'v3';
 const addInstructionsModal = new bootstrap.Modal(document.getElementById('addInstructionsModal'));
 
-class ProjectHandler {
+class ProjectController {
   constructor() {
-    this.settings = new Store();
     this.getProjects();
     this.currentProject = null;
     this.filesList = [];
@@ -53,34 +52,36 @@ class ProjectHandler {
       chatController.clearChat();
       chatController.chat.addFrontendMessage('assistant', `Hello! How can I assist you today?`);
     }
+
+    document.title = project.name + ' - CodeCompanion.AI';
   }
 
   getProjects() {
     this.projects = [];
-    const projects = this.settings.get('projects', []);
+    const projects = localStorage.get('projects', []);
     projects.forEach((project) => {
       if (fs.existsSync(pathModule.normalize(project.path))) {
         this.projects.push(project);
       } else {
-        settings.set(`project.${project.name}.embeddings`, '[]');
+        localStorage.set(`project.${project.name}.embeddings`, '[]');
       }
     });
     this.projects = this.projects.sort((a, b) => new Date(b.lastOpened) - new Date(a.lastOpened));
-    this.settings.set('projects', this.projects);
+    localStorage.set('projects', this.projects);
     return this.projects;
   }
 
   saveProject(name, path, filesHash) {
     const project = { name, path, lastOpened: new Date(), filesHash };
     this.projects.push(project);
-    this.settings.set('projects', this.projects);
+    localStorage.set('projects', this.projects);
     return project;
   }
 
   updateProject(project) {
     project.lastOpened = new Date();
     this.projects = this.projects.map((p) => (p.path === project.path ? project : p));
-    this.settings.set('projects', this.projects);
+    localStorage.set('projects', this.projects);
   }
 
   updateListOfFiles() {
@@ -94,29 +95,29 @@ class ProjectHandler {
 
     if (project) {
       addInstructionsModal.show();
-      let instructions = this.settings.get(`project.${project.name}.instructions`, '');
+      let instructions = localStorage.get(`project.${project.name}.instructions`, '');
       document.getElementById('customInstructions').value = instructions;
       this.instructionsProjectName = project.name;
     } else {
-      renderSystemMessage('Project not found');
+      viewController.updateFooterMessage('Project not found');
     }
   }
 
   saveInstructions() {
     const instructions = document.getElementById('customInstructions').value;
-    this.settings.set(`project.${this.instructionsProjectName}.instructions`, instructions);
-    renderSystemMessage('Instructions updated');
+    localStorage.set(`project.${this.instructionsProjectName}.instructions`, instructions);
+    viewController.updateFooterMessage('Instructions updated');
     addInstructionsModal.hide();
   }
 
   getCustomInstructions() {
     if (!this.currentProject) return;
-    const instructions = this.settings.get(`project.${this.currentProject.name}.instructions`, '');
+    const instructions = localStorage.get(`project.${this.currentProject.name}.instructions`, '');
     return instructions ? '\n\n' + instructions : '';
   }
 
   async createEmbeddings() {
-    const openAIApiKey = settings.get('apiKey');
+    const openAIApiKey = chatController.settings.apiKey;
     if (!openAIApiKey) {
       return;
     }
@@ -131,8 +132,8 @@ class ProjectHandler {
       return;
     }
 
-    const MAX_FILES_TO_EMBED = settings.get('maxFilesToEmbed') || 500;
-    if (this.filesList.length > MAX_FILES_TO_EMBED) {
+    const maxFilesToEmbed = chatController.settings.maxFilesToEmbed;
+    if (this.filesList.length > maxFilesToEmbed) {
       console.error(`Too many files to index with vector embeddings. (${this.filesList.length})`);
       chatController.chat.addFrontendMessage(
         'error',
@@ -142,10 +143,10 @@ class ProjectHandler {
         ${this.countFiles()}
         </code>
         Exclude files that don't need to be indexed for search in <code>.ccignore</code> file and try again.
-        Only first ${MAX_FILES_TO_EMBED} files will be indexed.
+        Only first ${maxFilesToEmbed} files will be indexed.
         `,
       );
-      this.filesList = this.filesList.slice(0, MAX_FILES_TO_EMBED);
+      this.filesList = this.filesList.slice(0, maxFilesToEmbed);
     }
 
     await this.embeddings.updateEmbeddingsForFiles(this.filesList);
@@ -263,4 +264,4 @@ class ProjectHandler {
   }
 }
 
-module.exports = ProjectHandler;
+module.exports = ProjectController;

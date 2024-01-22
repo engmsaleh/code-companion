@@ -1,36 +1,36 @@
 const fs = require('graceful-fs');
-const chatFunctions = require('./chat_functions');
+const chatFunctions = require('../tools/tools');
 const path = require('path');
-const { withErrorHandling } = require('./utils');
+const { withErrorHandling } = require('../utils');
 const SmartContext = require('./smart_context');
-const ProjectHandler = require('./project_handler');
+const ProjectController = require('../project_controller');
 
-class CodeAgent {
+class Agent {
   constructor() {
     this.currentWorkingDir = os.homedir();
     this.projectState = {};
     this.smartContext = new SmartContext();
-    this.projectHandler = new ProjectHandler();
+    this.projectController = new ProjectController();
     this.userDecision = null;
   }
 
   showWelcomeContent() {
     let recentProjectsContent = '';
     let currentProjectContent = '';
-    const recentProjects = this.projectHandler.getProjects().slice(0, 10);
+    const recentProjects = this.projectController.getProjects().slice(0, 10);
 
     recentProjects.forEach((project) => {
       recentProjectsContent += `
       <div class="row">
-        <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.codeAgent.projectHandler.openProject('${project.path}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
-        <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.codeAgent.projectHandler.showInstructionsModal('${project.path}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
+        <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${project.path}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
+        <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${project.path}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
         <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${project.path}</div>
       </div>`;
     });
 
-    if (this.projectHandler.currentProject) {
+    if (this.projectController.currentProject) {
       currentProjectContent = `
-        <p><span class="me-3">${this.projectHandler.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${this.projectHandler.currentProject.path}</span></p>
+        <p><span class="me-3">${this.projectController.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${this.projectController.currentProject.path}</span></p>
       `;
     }
 
@@ -41,7 +41,7 @@ class CodeAgent {
           <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Current</h6>
           ${currentProjectContent || '<p class="text-secondary">Please select a project directory to proceed</p>'}
           <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Open project</h6>
-          <a href="#" class="card-link text-decoration-none" onclick="event.preventDefault(); selectDirectory();"><i class="bi bi-folder-plus me-2"></i>Open</a>
+          <a href="#" class="card-link text-decoration-none" onclick="event.preventDefault(); viewController.selectDirectory();"><i class="bi bi-folder-plus me-2"></i>Open</a>
           <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Recent</h6>
           <div class="container-fluid">
             ${recentProjectsContent || '<p class="text-secondary">No recent projects</p>'}
@@ -55,7 +55,7 @@ class CodeAgent {
   async waitForDecision(functionName) {
     this.userDecision = null;
     const functionsRequiringApproval = ['create_or_overwrite_file', 'shell', 'replace'];
-    if (chatController.approvalRequired && functionsRequiringApproval.includes(functionName)) {
+    if (chatController.settings.approvalRequired && functionsRequiringApproval.includes(functionName)) {
       document.getElementById('messageInput').disabled = true;
       document.getElementById('approval_buttons').removeAttribute('hidden');
       return new Promise((resolve) => {
@@ -75,7 +75,7 @@ class CodeAgent {
     }
   }
 
-  async runCodeAgent(apiResponseMessage) {
+  async runAgent(apiResponseMessage) {
     if (chatController.stopProcess || !apiResponseMessage) {
       return;
     }
@@ -94,7 +94,7 @@ class CodeAgent {
             this.smartContext.updateContext(chatController.chat);
             await chatController.process('', false);
           } else {
-            updateLoadingIndicator(false);
+            viewController.updateLoadingIndicator(false);
             console.error('No output from function call');
           }
         } else {
@@ -109,7 +109,7 @@ class CodeAgent {
   }
 
   async callFunction(functionCall) {
-    updateLoadingIndicator(true);
+    viewController.updateLoadingIndicator(true);
     const functionName = functionCall.name;
     const args = this.parseArguments(functionCall);
     let result = '';
@@ -148,7 +148,7 @@ class CodeAgent {
         backendMessage: `Error: ${error.message}`,
       };
     } finally {
-      updateLoadingIndicator(false);
+      viewController.updateLoadingIndicator(false);
       return result;
     }
   }
@@ -222,7 +222,7 @@ class CodeAgent {
 
     projectStateText +=
       '\n\nDo not provide created or updated code and do not include function call name that you will use in the message content, only in the function call arguments. Do not provide instructions how to complete the task to user, instead always call a function yourself. Do not stop until all requirements are completed and everything is fully functional.';
-    projectStateText += this.projectHandler.getCustomInstructions();
+    projectStateText += this.projectController.getCustomInstructions();
     return projectStateText;
   }
 
@@ -278,4 +278,4 @@ class CodeAgent {
   }
 }
 
-module.exports = CodeAgent;
+module.exports = Agent;

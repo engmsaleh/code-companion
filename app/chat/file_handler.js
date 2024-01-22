@@ -2,7 +2,7 @@ const fileType = require('file-type').fromBuffer;
 const readChunkSync = require('read-chunk').sync;
 const reader = require('any-text');
 const pdfjsLib = require('pdfjs-dist/build/pdf');
-const { isTextFile } = require('./utils');
+const { isTextFile } = require('../utils');
 
 async function readPDFFile(filePath) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = path.resolve(__dirname, '../node_modules/pdfjs-dist/build/pdf.worker.js');
@@ -48,7 +48,7 @@ async function processFile(filepath) {
 }
 
 function readTextFile(filePath) {
-  onboarding.showSpecificTips(['on_file_upload']);
+  onboardingController.showSpecificTips(['on_file_upload']);
 
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -63,14 +63,14 @@ function readTextFile(filePath) {
 }
 
 async function handleDrop(event) {
-  updateLoadingIndicator(true);
+  viewController.updateLoadingIndicator(true);
   event.preventDefault();
   const { files } = event.dataTransfer;
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     processFile(file.path);
   }
-  updateLoadingIndicator(false);
+  viewController.updateLoadingIndicator(false);
 }
 
 module.exports = {

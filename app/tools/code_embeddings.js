@@ -5,7 +5,8 @@ const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const detect = require('language-detect');
-const { isTextFile } = require('./utils');
+
+const { isTextFile } = require('../utils');
 
 const EMBEDDINGS_VERSION = 'v3';
 
@@ -181,11 +182,11 @@ Respond with JSON array only with actual array indexes in the order of relevance
   }
 
   save() {
-    settings.set(`project.${this.projectName}.embeddings`, JSON.stringify(this.vectorStore.memoryVectors));
+    localStorage.set(`project.${this.projectName}.embeddings`, JSON.stringify(this.vectorStore.memoryVectors));
   }
 
   async load() {
-    const serializedVectors = settings.get(`project.${this.projectName}.embeddings`);
+    const serializedVectors = localStorage.get(`project.${this.projectName}.embeddings`);
     if (!serializedVectors) return;
 
     const vectors = JSON.parse(serializedVectors);

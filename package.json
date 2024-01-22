@@ -48,7 +48,7 @@
         }
       ],
       "signAndEditExecutable": true,
-      "publisherName": "CodeCompanion",
+      "publisherName": "Alexander Hedrevich",
       "artifactName": "${productName}.${ext}"
     },
     "nsis": {

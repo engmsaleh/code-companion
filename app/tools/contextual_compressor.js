@@ -6,7 +6,7 @@ const { ContextualCompressionRetriever } = require('langchain/retrievers/context
 const { LLMChainExtractor } = require('langchain/retrievers/document_compressors/chain_extract');
 
 async function contextualCompress(query, texts, metadatas = [], docsToRetrieve = 5) {
-  const openAIApiKey = settings.get('apiKey');
+  const openAIApiKey = chatController.settings.apiKey;
   const model = new OpenAI({
     openAIApiKey: openAIApiKey,
     modelName: 'gpt-3.5-turbo-0613',

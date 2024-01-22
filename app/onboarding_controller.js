@@ -1,18 +1,18 @@
 const helpModal = new bootstrap.Modal(document.getElementById('helpMessage'));
+const onboardingSteps = require('./static/onboarding_steps');
 
-class Onboarding {
-  constructor(steps) {
+class OnboardingController {
+  constructor(steps = onboardingSteps) {
     this.steps = steps || [];
-    this.store = settings;
     this.showingId = null;
   }
 
   hasBeenShown(id) {
-    return this.store.get(`onboarding.${id}`, false);
+    return localStorage.get(`onboarding.${id}`, false);
   }
 
   markAsRead() {
-    this.store.set(`onboarding.${this.showingId}`, true);
+    localStorage.set(`onboarding.${this.showingId}`, true);
     this.hideModal();
     this.showingId = null;
   }
@@ -53,4 +53,4 @@ class Onboarding {
   }
 }
 
-module.exports = Onboarding;
+module.exports = OnboardingController;

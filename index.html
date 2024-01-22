@@ -25,10 +25,10 @@
         </button>
         <div class="d-flex align-items-center mx-3 ms-auto">
           <label for="modelDropdown" class="form-label mx-1 mb-0">Model:</label>
-          <select class="form-select form-select-sm" id="modelDropdown" onchange="chatController.setModel(this.value)" style="width: auto"></select>
+          <select class="form-select form-select-sm" id="selectedModel" onchange="chatController.saveSetting('selectedModel')" style="width: auto"></select>
         </div>
         <div class="form-check form-switch me-auto">
-          <input class="form-check-input" type="checkbox" id="approvalToggle" onchange="chatController.setApprovalRequired(this.checked)">
+          <input class="form-check-input" type="checkbox" id="approvalRequired" onchange="chatController.saveSetting('approvalRequired')">
           <label class="form-check-label" for="approvalToggle">Require approval</label>
           <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right" title="Require approval for actions that make changes, such as writing files or executing commands."></i>
         </div>
@@ -67,9 +67,9 @@
               Retry
             </button>
           </div>
-          <div id="loading_indicator" class="mt-3" hidden>
+          <div id="loadingIndicator" class="mt-3" hidden>
             <div class="spinner-grow spinner-grow-sm text-secondary ms-2" role="status"></div>
-            <span class="ms-3 text-secondary small" id="loading_message"></span>
+            <span class="ms-3 text-secondary small" id="loadingMessage"></span>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@
         <div>
           <div class="d-flex align-items-end mr-3 bottom-0 bg-body py-3">
             <div>
-              <button class="btn shadow-none btn-sm text-decoration-none" type="button" id="openFileBtn" onclick="openFileDialogue()">
+              <button class="btn shadow-none btn-sm text-decoration-none" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
                 <i class="bi bi-file-earmark-plus bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload a file"></i>
               </button>
               <button class="btn shadow-none btn-sm text-decoration-none me-2" type="button" id="clearChat" onclick="chatController.clearChat()">
@@ -141,42 +141,42 @@
         <label for="apiKey" class="form-label mt-4">OpenAI API Key:</label>
         <div class="input-group">
           <input type="text" class="form-control" id="apiKey" placeholder="Your API Key" />
-          <button class="btn btn-outline-secondary" type="button" id="saveApiKey" onclick="saveApiKey()">Save</button>
+          <button class="btn btn-outline-secondary" type="button" id="saveApiKey" onclick="chatController.saveSetting('apiKey');">Save</button>
         </div>
 
-        <label for="apiKey" class="form-label mt-4">OpenAI Base URL:</label>
+        <label for="apiKey" class="form-label mt-4">API Endpoint URL:</label>
         <div class="input-group">
-          <input type="text" class="form-control" id="baseUrl" placeholder="Optional. Enter your OpenAI endpoint URL here if different from default." />
-          <button class="btn btn-outline-secondary" type="button" id="saveBaseURL" onclick="saveBaseURL()">Save</button>
+          <input type="text" class="form-control" id="baseUrl" placeholder="Optional" />
+          <button class="btn btn-outline-secondary" type="button" id="saveBaseURL" onclick="chatController.saveSetting('baseUrl')">Save</button>
         </div>
         
         <label for="maxTokensPerRequest" class="form-label mt-4">Max tokens per request:</label>
         <div class="input-group">
           <input type="text" class="form-control" id="maxTokensPerRequest" placeholder="Max tokens per request" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerRequest" onclick="saveMaxTokensPerRequest()">Save</button>
+          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerRequest" onclick="chatController.saveSetting('maxTokensPerRequest')">Save</button>
         </div>
         
         <label for="maxTokensPerChat" class="form-label mt-4">Max tokens per chat:</label>
         <div class="input-group">
           <input type="text" class="form-control" id="maxTokensPerChat" placeholder="Max tokens per chat" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerChat" onclick="saveMaxTokensPerChat()">Save</button>
+          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerChat" onclick="chatController.saveSetting('maxTokensPerChat')">Save</button>
         </div>
 
         <label for="maxFilesToEmbed" class="form-label mt-4">Max files to index (Code search):</label>
         <div class="input-group">
           <input type="text" class="form-control" id="maxFilesToEmbed" placeholder="For vector embeddings" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxFilesToEmbed" onclick="saveMaxFilesToEmbed()">Save</button>
+          <button class="btn btn-outline-secondary" type="button" id="saveMaxFilesToEmbed" onclick="chatController.saveSetting('maxFilesToEmbed');">Save</button>
         </div>
 
         <label for="commandToOpenFile" class="form-label mt-4">Command to open a file via link:</label>
         <div class="input-group">
           <input type="text" class="form-control" id="commandToOpenFile" placeholder="Example: 'code' to open VS Code" />
-          <button class="btn btn-outline-secondary" type="button" onclick="saveCommandToOpenFile()">Save</button>
+          <button class="btn btn-outline-secondary" type="button" onclick="chatController.saveSetting('commandToOpenFile');">Save</button>
         </div>
 
         <div>
           <label for="themeDropdown" class="form-label mt-4">Theme:</label>
-          <select class="form-select w-100" id="themeDropdown" onchange="changeTheme(this.value)" style="width: auto">
+          <select class="form-select w-100" id="theme" onchange="viewController.changeTheme(this.value)" style="width: auto">
             <option value="dark" selected>Dark</option>
             <option value="light">Light</option>
           </select>
@@ -225,7 +225,7 @@
     <div class="modal" tabindex="-1" id="addInstructionsModal">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <form id="saveChatForm" onsubmit="event.preventDefault(); chatController.codeAgent.projectHandler.saveInstructions();">
+          <form id="saveChatForm" onsubmit="event.preventDefault(); chatController.agent.projectController.saveInstructions();">
             <div class="modal-header">
               <h5 class="modal-title">Add Custom Instructions</h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -235,7 +235,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary" onclick="chatController.codeAgent.projectHandler.saveInstructions();">Save</button>
+              <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary" onclick="chatController.agent.projectController.saveInstructions();">Save</button>
             </div>
           </form>
         </div>
@@ -267,13 +267,13 @@
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title">Tips</h5>
-              <button type="button" class="btn-close" onclick="onboarding.markAsRead()" aria-label="Close"></button>
+              <button type="button" class="btn-close" onclick="onboardingController.markAsRead()" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <div id="helpMessageContent"></div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-primary" onclick="onboarding.markAsRead()">Close</button>
+              <button type="button" class="btn btn-primary" onclick="onboardingController.markAsRead()">Close</button>
             </div>
           </div>
         </div>
