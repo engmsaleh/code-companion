@@ -60,7 +60,6 @@ class ChatController {
       config.baseURL = this.settings.baseUrl;
     }
 
-    console.log(config);
     this.openai = new OpenAI(config);
     this.backgroundTask = new BackgroundTask(this);
   }

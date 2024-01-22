@@ -1,4 +1,3 @@
-require('dotenv').config();
 const { google } = require('googleapis');
 const customsearch = google.customsearch('v1');
 

@@ -6,10 +6,11 @@ const path = require('path');
 const ElectronStore = require('electron-store');
 const pty = require('node-pty');
 const { debounce } = require('lodash');
+const Sentry = require('@sentry/electron');
 const { initialize } = require('@aptabase/electron/main'); // for DAU tracking
 
 ElectronStore.initRenderer();
-const store = new ElectronStore();
+const localStorage = new ElectronStore();
 
 let win;
 let isUpdateInProgress = false;
@@ -19,17 +20,21 @@ if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   setTimeout(() => {
     win.webContents.openDevTools();
   }, 1000);
+} else {
+  Sentry.init({
+    dsn: 'https://87985c08c00b4f0c83989b182e9fbe95@o4505507137847296.ingest.sentry.io/4505507139485696',
+  });
 }
 initialize('A-US-5249376059');
 
 function createWindow() {
   const { screen } = require('electron');
-  let { width, height, x, y } = store.get('windowBounds') || {};
+  let { width, height, x, y } = localStorage.get('windowBounds') || {};
   if (!width || !height) {
     const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
     screenWidth > 1400 ? (width = 1400) : (width = Math.floor(screenWidth * 0.8));
     screenHeight > 1080 ? (height = 1080) : (height = Math.floor(screenHeight * 0.8));
-    store.set('windowBounds', { width, height });
+    localStorage.set('windowBounds', { width, height });
   }
   win = new BrowserWindow({
     show: false,
@@ -43,7 +48,6 @@ function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
       preload: path.join(__dirname, 'preload.js'),
-      devTools: !app.isPackaged,
     },
   });
   win.loadFile('index.html');
@@ -154,7 +158,7 @@ function createWindow() {
 
   function saveWindowState() {
     const { width, height, x, y } = win.getBounds();
-    store.set('windowBounds', {
+    localStorage.set('windowBounds', {
       width,
       height,
       x,
