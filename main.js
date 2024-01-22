@@ -64,7 +64,7 @@ function createWindow() {
           label: 'Open Project',
           accelerator: 'CmdOrCtrl+O',
           click() {
-            win.webContents.executeJavaScript('selectDirectory();');
+            win.webContents.executeJavaScript('viewController.selectDirectory();');
           },
         },
         {
@@ -97,15 +97,15 @@ function createWindow() {
               .checkForUpdates()
               .then((updateCheckResult) => {
                 if (updateCheckResult && updateCheckResult.updateAvailable) {
-                  win.webContents.executeJavaScript("renderSystemMessage('Update available. Downloading...')");
+                  win.webContents.executeJavaScript("viewController.updateFooterMessage('Update available. Downloading...')");
                 } else {
                   isUpdateInProgress = false;
-                  win.webContents.executeJavaScript("renderSystemMessage('App is up to date')");
+                  win.webContents.executeJavaScript("viewController.updateFooterMessage('App is up to date')");
                 }
               })
               .catch((error) => {
                 console.error(error);
-                win.webContents.executeJavaScript(`renderSystemMessage('Error occured when updating app. ${error.toString()}')`);
+                win.webContents.executeJavaScript(`viewController.updateFooterMessage('Error occured when updating app. ${error.toString()}')`);
               });
           },
         },
@@ -138,14 +138,14 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 
   win.on('show', () => {
-    win.webContents.executeJavaScript('onShow()');
+    win.webContents.executeJavaScript('viewController.onShow()');
     if (!isUpdateInProgress) {
       autoUpdater.checkForUpdates();
     }
   });
 
   win.on('focus', () => {
-    win.webContents.executeJavaScript('onShow()');
+    win.webContents.executeJavaScript('viewController.onShow()');
   });
 
   win.on('closed', () => {
@@ -180,28 +180,28 @@ function createWindow() {
     const version = app.getVersion();
     const userDataPath = app.getPath('userData');
     win.webContents.send('app-info', { version, userDataPath });
-    win.webContents.executeJavaScript('onShow()');
+    win.webContents.executeJavaScript('viewController.onShow()');
   });
 
   // Autoupdater
 
   autoUpdater.on('checking-for-update', () => {
-    win.webContents.executeJavaScript("renderSystemMessage('Checking for update...')");
+    win.webContents.executeJavaScript("viewController.updateFooterMessage('Checking for update...')");
   });
 
   autoUpdater.on('update-available', () => {
     isUpdateInProgress = true;
-    win.webContents.executeJavaScript("renderSystemMessage('Update available. Downloading...')");
+    win.webContents.executeJavaScript("viewController.updateFooterMessage('Update available. Downloading...')");
   });
 
   autoUpdater.on('update-not-available', () => {
     isUpdateInProgress = false;
-    win.webContents.executeJavaScript("renderSystemMessage('App is up to date')");
+    win.webContents.executeJavaScript("viewController.updateFooterMessage('App is up to date')");
   });
 
   autoUpdater.on('update-downloaded', () => {
     isUpdateInProgress = true;
-    win.webContents.executeJavaScript("renderSystemMessage('Restart to install updates')");
+    win.webContents.executeJavaScript("viewController.updateFooterMessage('Restart to install updates')");
 
     dialog
       .showMessageBox({
@@ -221,13 +221,13 @@ function createWindow() {
     isUpdateInProgress = false;
     console.error(error);
     if (error.message.includes('net::ERR_INTERNET_DISCONNECTED')) {
-      win.webContents.executeJavaScript("renderSystemMessage('Internet connection is not available.')");
+      win.webContents.executeJavaScript("viewController.updateFooterMessage('Internet connection is not available.')");
     }
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
     const log_message = `Update downloading ${Math.round(progressObj.percent)}%`;
-    win.webContents.executeJavaScript(`renderSystemMessage('${log_message}')`);
+    win.webContents.executeJavaScript(`viewController.updateFooterMessage('${log_message}')`);
   });
 }
 

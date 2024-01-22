@@ -1,43 +1,108 @@
 const os = require('os');
+const { OpenAI } = require('openai');
 const Parser = require('@postlight/parser');
 const _ = require('lodash');
-const CodeAgent = require('./code_agent');
-const Chat = require('./chat');
-const TerminalSession = require('./terminal_session');
+const autosize = require('autosize');
+
+const Agent = require('./chat/agent');
+const Chat = require('./chat/chat');
+const TerminalSession = require('./tools/terminal_session');
 const { getSystemInfo } = require('./utils');
 const { systemMessage, codeFunctions } = require('./static/prompts');
 const { reduceTokensUsage } = require('./static/constants');
 const { trackEvent } = require('@aptabase/electron/renderer');
-const BackgroundTask = require('./background_task');
+const BackgroundTask = require('./tools/background_task');
+
+const MAX_RETRIES = 3;
+const DEFAULT_SETTINGS = {
+  apiKey: '',
+  baseUrl: '',
+  selectedModel: 'gpt-4-1106-preview',
+  approvalRequired: true,
+  maxTokensPerRequest: 10000,
+  maxTokensPerChat: 100000,
+  maxFilesToEmbed: 500,
+  commandToOpenFile: 'code',
+  theme: 'dark',
+};
 
 class ChatController {
   constructor() {
-    this.MAX_RETRIES = 3;
-    this.selectedModel = 'gpt-4-1106-preview';
     this.openai = null;
-    this.abortController = new AbortController();
     this.stopProcess = false;
+    this.conversationTokens = 0;
+    this.lastRequestTokens = 0;
+    this.isProcessing = false;
+
+    this.loadAllSettings();
+    this.initializeOpenAIAPI();
+    this.abortController = new AbortController();
     this.chat = new Chat();
-    this.codeAgent = new CodeAgent();
+    this.agent = new Agent();
     this.terminalSession = new TerminalSession();
     this.processMessageChange = this.processMessageChange.bind(this);
     this.submitMessage = this.submitMessage.bind(this);
-    this.conversationTokens = 0;
-    this.lastRequestTokens = 0;
-    this.approvalRequired = settings.get('approvalRequired') || true;
-    this.isProcessing = false;
-    this.backgroundTask = new BackgroundTask();
   }
 
-  setModel(model) {
-    this.selectedModel = model;
-    settings.set('selectedModel', this.selectedModel);
-    document.getElementById('modelDropdown').value = this.selectedModel;
+  initializeOpenAIAPI() {
+    const apiKey = this.settings.apiKey;
+    if (!apiKey) {
+      return;
+    }
+
+    const config = {
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+      maxRetries: MAX_RETRIES,
+    };
+
+    if (this.settings.baseUrl) {
+      config.baseURL = this.settings.baseUrl;
+    }
+
+    console.log(config);
+    this.openai = new OpenAI(config);
+    this.backgroundTask = new BackgroundTask(this);
   }
 
-  setApprovalRequired(isRequired) {
-    this.approvalRequired = isRequired;
-    settings.set('approvalRequired', this.approvalRequired);
+  loadAllSettings() {
+    this.settings = {};
+
+    Object.keys(DEFAULT_SETTINGS).forEach((key) => {
+      const value = this.loadSetting(key);
+      this.renderSettingValueInUI(key, value);
+    });
+  }
+
+  renderSettingValueInUI(key, value) {
+    let element = document.getElementById(key);
+    if (element.type === 'checkbox') {
+      element.checked = value;
+    } else {
+      element.value = value;
+    }
+  }
+
+  loadSetting(key) {
+    const storedValue = localStorage.get(key);
+    this.settings[key] = storedValue === undefined ? DEFAULT_SETTINGS[key] : storedValue;
+
+    return this.settings[key];
+  }
+
+  saveSetting(key, value = null) {
+    const element = document.getElementById(key);
+    if (value === null) {
+      element.type === 'checkbox' ? (value = element.checked) : (value = element.value);
+    }
+    localStorage.set(key, value);
+    this.settings[key] = value;
+    this.renderSettingValueInUI(key, value);
+
+    if (key === 'apiKey' || key === 'baseUrl') {
+      this.initializeOpenAIAPI();
+      this.clearChat();
+    }
   }
 
   handleError(error) {
@@ -65,7 +130,7 @@ class ChatController {
     }, 2000);
   }
 
-  async callAPI(api_messages, model = this.selectedModel, retryCount = 0) {
+  async callAPI(api_messages, model = this.settings.selectedModel, retryCount = 0) {
     if (isDevelopment) {
       console.log(`Calling API with messages (${this.chat.countTokens(JSON.stringify(api_messages))} tokens)`, api_messages);
     }
@@ -83,16 +148,16 @@ class ChatController {
       this.lastRequestTokens = this.chat.countTokens(JSON.stringify(api_messages));
       this.conversationTokens += this.lastRequestTokens;
 
-      if (this.lastRequestTokens > this.maxTokensPerRequest) {
+      if (this.lastRequestTokens > this.settings.maxTokensPerRequest) {
         throw new Error(
-          `\nThe number of tokens in the current request (${this.lastRequestTokens}) exceeds maximum value in settings: ${this.maxTokensPerRequest}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
+          `\nThe number of tokens in the current request (${this.lastRequestTokens}) exceeds maximum value in settings: ${this.settings.maxTokensPerRequest}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
           ${reduceTokensUsage}
           `,
         );
       }
-      if (this.conversationTokens > this.maxTokensPerChat) {
+      if (this.conversationTokens > this.settings.maxTokensPerChat) {
         throw new Error(
-          `The total number of tokens used in this chat (${this.conversationTokens}) exceeds ${this.maxTokensPerChat}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
+          `The total number of tokens used in this chat (${this.conversationTokens}) exceeds ${this.settings.maxTokensPerChat}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
           ${reduceTokensUsage}
           `,
         );
@@ -121,7 +186,7 @@ class ChatController {
         JSON.parse(chatCompletion.choices[0].message.function_call.arguments);
       }
 
-      renderSystemMessage();
+      viewController.updateFooterMessage();
       return chatCompletion;
     } catch (error) {
       console.error('Error during openai.createChatCompletion:', error);
@@ -131,7 +196,7 @@ class ChatController {
           throw error;
         }
         console.error(`Rate limit exceeded, retrying - ${retryCount}...`, error);
-        renderSystemMessage('Error occured. Retrying...');
+        viewController.updateFooterMessage('Error occured. Retrying...');
         await new Promise((resolve) => setTimeout(resolve, 300));
         return this.callAPI(api_messages, model, retryCount + 1);
       } else {
@@ -163,7 +228,7 @@ class ChatController {
     }
 
     if (this.stopProcess) {
-      updateLoadingIndicator(false);
+      viewController.updateLoadingIndicator(false);
       return;
     }
 
@@ -175,10 +240,10 @@ class ChatController {
     }
 
     // add project state context to messages for Code Agent
-    await this.codeAgent.updateProjectState();
+    await this.agent.updateProjectState();
 
     try {
-      updateLoadingIndicator(true, 'Waiting for ChatGPT ...');
+      viewController.updateLoadingIndicator(true, 'Waiting for ChatGPT ...');
       const formattedMessages = this.chat.backendMessages.map((message) => _.omit(message, ['id']));
       const apiResponse = await this.callAPI(formattedMessages);
 
@@ -198,15 +263,15 @@ class ChatController {
     } catch (error) {
       this.handleError(error);
     } finally {
-      updateLoadingIndicator(false);
+      viewController.updateLoadingIndicator(false);
     }
 
     this.isProcessing = false;
-    await this.codeAgent.runCodeAgent(apiResponseMessage);
+    await this.agent.runAgent(apiResponseMessage);
   }
 
   async fetchAndParseUrl(url) {
-    updateLoadingIndicator(true);
+    viewController.updateLoadingIndicator(true);
     try {
       const parsedResult = await Parser.parse(url, { contentType: 'text' });
       if (parsedResult.failed) {
@@ -272,7 +337,7 @@ class ChatController {
     trackEvent(`new_chat`);
     this.chat = new Chat();
     this.chat.addBackendMessage('system', systemMessage);
-    this.codeAgent.userDecision = false;
+    this.agent.userDecision = false;
     this.terminalSession.createShellSession();
     document.getElementById('output').innerHTML = '';
     document.getElementById('retry_button').setAttribute('hidden', true);
@@ -281,9 +346,9 @@ class ChatController {
     this.stopProcess = false;
     this.conversationTokens = 0;
     this.lastRequestTokens = 0;
-    renderSystemMessage();
+    viewController.updateFooterMessage();
 
-    this.codeAgent.projectState = {
+    this.agent.projectState = {
       complexity: '',
       currentWorkingDir: '',
       folderStructure: '',
@@ -291,9 +356,9 @@ class ChatController {
     };
 
     this.buildSystemMessage();
-    onboarding.showAllTips();
-    this.codeAgent.showWelcomeContent();
-    onShow();
+    onboardingController.showAllTips();
+    this.agent.showWelcomeContent();
+    viewController.onShow();
   }
 }
 

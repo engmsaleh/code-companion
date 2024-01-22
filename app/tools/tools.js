@@ -146,7 +146,7 @@ async function readFile({ targetFiles }) {
 }
 
 async function shell({ command }) {
-  updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
+  viewController.updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
   let commandResult = await chatController.terminalSession.executeShellCommand(command);
   // get last 20 lines of the terminal output to reduce token usage
   const lines = commandResult.split('\n');
@@ -157,7 +157,7 @@ async function shell({ command }) {
   }
   commandResult = commandResult.replace(command, '');
   commandResult = `Command that was executed in terminal: '${command}'\nTerminal command output was:\n'${commandResult}'`;
-  updateLoadingIndicator(false);
+  viewController.updateLoadingIndicator(false);
 
   return {
     frontendMessage: '',
@@ -166,7 +166,7 @@ async function shell({ command }) {
 }
 
 async function searchCode({ query, rerank = true, count = 20 }) {
-  let results = await chatController.codeAgent.projectHandler.searchEmbeddings({ query, count, rerank });
+  let results = await chatController.agent.projectController.searchEmbeddings({ query, count, rerank });
   let frontendMessage = '';
   let backendMessage = '';
   let uniqueFiles = [];
@@ -225,7 +225,7 @@ async function getFilePath(targetFile) {
     return targetFile;
   }
   await chatController.terminalSession.getCurrentDirectory();
-  return path.join(chatController.codeAgent.currentWorkingDir, targetFile);
+  return path.join(chatController.agent.currentWorkingDir, targetFile);
 }
 
 async function openFileLink(filepath) {
@@ -233,21 +233,21 @@ async function openFileLink(filepath) {
     let absolutePath = path.normalize(filepath);
 
     if (!path.isAbsolute(absolutePath)) {
-      if (chatController.codeAgent.projectHandler.currentProject) {
-        absolutePath = path.join(chatController.codeAgent.projectHandler.currentProject.path, absolutePath);
+      if (chatController.agent.projectController.currentProject) {
+        absolutePath = path.join(chatController.agent.projectController.currentProject.path, absolutePath);
       } else {
         absolutePath = await getFilePath(absolutePath);
       }
     }
 
     let filename;
-    if (chatController.codeAgent.projectHandler.currentProject) {
-      filename = path.relative(chatController.codeAgent.projectHandler.currentProject.path, absolutePath);
+    if (chatController.agent.projectController.currentProject) {
+      filename = path.relative(chatController.agent.projectController.currentProject.path, absolutePath);
     } else {
-      filename = path.relative(chatController.codeAgent.currentWorkingDir, absolutePath);
+      filename = path.relative(chatController.agent.currentWorkingDir, absolutePath);
     }
 
-    return `<a href="#" onclick="event.preventDefault(); openFile('${absolutePath}')">${filename}</a>`;
+    return `<a href="#" onclick="event.preventDefault(); viewController.openFileInIDE('${absolutePath}')">${filename}</a>`;
   } catch (error) {
     console.error(error);
     return filepath;

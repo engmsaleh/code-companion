@@ -8,7 +8,7 @@ const { Unicode11Addon } = require('xterm-addon-unicode11');
 const interact = require('interactjs');
 const { ipcRenderer, shell } = require('electron');
 const { debounce } = require('lodash');
-const { withTimeout } = require('./utils');
+const { withTimeout } = require('../utils');
 
 let FIXED_PROMPT = '\x91\x91\x91';
 const PROMPT_TIMEOUT = 1000;
@@ -79,13 +79,13 @@ class TerminalSession {
     this.terminal.unicode.activeVersion = '11';
 
     // set terminal height to last saved value
-    const terminalOutputHeight = settings.get('terminalOutputHeight');
+    const terminalOutputHeight = localStorage.get('terminalOutputHeight');
     if (terminalOutputHeight) {
       document.querySelector('#terminal_output').style.height = `${terminalOutputHeight}px`;
     }
 
     ipcRenderer.send('start-shell', {
-      cwd: chatController.codeAgent.currentWorkingDir,
+      cwd: chatController.agent.currentWorkingDir,
     });
     ipcRenderer.on('shell-type', (event, data) => {
       this.shellType = data;
@@ -153,7 +153,7 @@ class TerminalSession {
         move: (event) => {
           const newHeight = parseInt(window.getComputedStyle(this.terminalOutput).height) - event.dy;
           this.terminalOutput.style.height = `${newHeight}px`;
-          settings.set('terminalOutputHeight', newHeight);
+          localStorage.set('terminalOutputHeight', newHeight);
           this.debounceResizeTerminalWindow();
         },
       },
@@ -239,13 +239,13 @@ class TerminalSession {
 
   async navigateToDirectory(dir) {
     await this.executeShellCommand(`cd "${dir}"`);
-    chatController.codeAgent.currentWorkingDir = dir;
+    chatController.agent.currentWorkingDir = dir;
     this.needToUpdateWorkingDir = false;
   }
 
   async getCurrentDirectory() {
     if (!this.needToUpdateWorkingDir) {
-      return chatController.codeAgent.currentWorkingDir;
+      return chatController.agent.currentWorkingDir;
     }
 
     let dir;
@@ -269,9 +269,9 @@ class TerminalSession {
     const lines = dir.split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {
       if (this.directoryExists(lines[i])) {
-        chatController.codeAgent.currentWorkingDir = lines[i];
+        chatController.agent.currentWorkingDir = lines[i];
         this.needToUpdateWorkingDir = false;
-        return chatController.codeAgent.currentWorkingDir;
+        return chatController.agent.currentWorkingDir;
       }
     }
 

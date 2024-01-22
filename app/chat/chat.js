@@ -1,6 +1,5 @@
 const { clipboard } = require('electron');
 const { getEncoding } = require('js-tiktoken');
-const { formatResponse, updateLoadingIndicator, addCopyCodeButtons, scrollToBottom } = require('./view_handler');
 const ChatHistory = require('./chat_history');
 const { debounce } = require('lodash');
 
@@ -12,7 +11,6 @@ class Chat {
     this.lastBackendMessageId = 0;
     this.history = new ChatHistory();
     this.tokenizer = getEncoding('cl100k_base');
-    this.debouncedScrollToBottom = debounce(scrollToBottom, 300);
   }
 
   isEmpty() {
@@ -114,21 +112,18 @@ class Chat {
   }
 
   updateUI() {
-    updateLoadingIndicator(false);
+    viewController.updateLoadingIndicator(false);
     document.getElementById('streaming_output').innerHTML = '';
-    const formattedMessages = this.frontendMessages.map((msg) => formatResponse(msg)).join('');
+    const formattedMessages = this.frontendMessages.map((msg) => viewController.formatResponse(msg)).join('');
     document.getElementById('output').innerHTML = formattedMessages;
-
-    setTimeout(() => {
-      scrollToBottom();
-    }, 100);
-    addCopyCodeButtons();
+    viewController.scrollToBottom();
+    viewController.addCopyCodeButtons();
   }
 
   updateStreamingMessage(message) {
-    const formattedMessage = formatResponse({ role: 'assistant', content: message });
+    const formattedMessage = viewController.formatResponse({ role: 'assistant', content: message });
     document.getElementById('streaming_output').innerHTML = formattedMessage;
-    this.debouncedScrollToBottom();
+    viewController.scrollToBottom();
   }
 
   countTokens(content) {
