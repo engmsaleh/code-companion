@@ -3,8 +3,8 @@
 Welcome to CodeCompanion.AI, your personal coding assistant that helps you translate natural language instructions into code. This document will guide you through setting up the application, understanding its structure, and contributing to its development.
 
 ## Demo
+https://github.com/codecompanion-ai/code-companion/assets/156543223/9990e7a8-a1ca-4172-8370-9befd49c7b6b
 
-https://github.com/codecompanion-ai/code-companion/blob/main/video/CodeCompanionAssistant.mp4
 
 ## Quick Start
 
