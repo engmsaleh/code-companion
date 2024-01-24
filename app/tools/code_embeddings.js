@@ -2,7 +2,7 @@ const fs = require('graceful-fs');
 const pathModule = require('path');
 const CryptoJS = require('crypto-js');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
-const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
+const { OpenAIEmbeddings } = require('@langchain/openai');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const detect = require('language-detect');
 

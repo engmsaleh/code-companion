@@ -19,7 +19,7 @@ class BackgroundTask {
       };
 
       config.model = this.chatController.settings.baseUrl ? this.chatController.selectedModel : DEFAULT_MODEL;
-      if (MODELS_WITH_JSON_SUPPORT.includes(model)) {
+      if (MODELS_WITH_JSON_SUPPORT.includes(config.model)) {
         config.response_format = { type: 'json_object' };
       }
 

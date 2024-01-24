@@ -1,7 +1,7 @@
-const { OpenAI } = require('langchain/llms/openai');
+const { OpenAI } = require('@langchain/openai');
 const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
-const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
+const { OpenAIEmbeddings } = require('@langchain/openai');
 const { ContextualCompressionRetriever } = require('langchain/retrievers/contextual_compression');
 const { LLMChainExtractor } = require('langchain/retrievers/document_compressors/chain_extract');
 

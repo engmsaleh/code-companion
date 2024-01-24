@@ -143,6 +143,10 @@ class ChatController {
         functions: codeFunctions,
       };
 
+      if (isDevelopment) {
+        callParams.seed = 69;
+      }
+
       // calculate tokens for last request
       this.lastRequestTokens = this.chat.countTokens(JSON.stringify(api_messages));
       this.conversationTokens += this.lastRequestTokens;
