@@ -8,7 +8,8 @@ const detect = require('language-detect');
 
 const { isTextFile } = require('../utils');
 
-const EMBEDDINGS_VERSION = 'v3';
+const EMBEDDINGS_VERSION = 'v4';
+const EMBEDDINGS_MODEL_NAME = 'text-embedding-3-large';
 
 const detectedLanguageToSplitterMapping = {
   'C++': 'cpp',
@@ -36,7 +37,7 @@ class CodeEmbeddings {
     this.vectorStore = new MemoryVectorStore(
       new OpenAIEmbeddings({
         openAIApiKey,
-        modelName: 'text-embedding-ada-002',
+        modelName: EMBEDDINGS_MODEL_NAME,
         maxRetries: 3,
         timeout: 60 * 1000,
       }),
@@ -129,7 +130,7 @@ class CodeEmbeddings {
     this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter((record) => record.metadata.filePath !== filePath);
   }
 
-  async search({ query, limit = 50, basePath, minScore = 0.5, rerank = true }) {
+  async search({ query, limit = 50, basePath, minScore = 0.4, rerank = true }) {
     const results = await this.vectorStore.similaritySearchWithScore(query, limit * 2);
     if (!results) return [];
 
@@ -170,7 +171,7 @@ Search engine search results are:
 ${JSON.stringify(searchResultsWithIndex)}
 
 What array indexes of these search result objects in JSON array above are the most relevant code snippets to my search query?
-Respond with JSON array only with actual array indexes in the order of relevance, drop irrelevant results. Return array with ${limit} relevant indexes.}`;
+Respond with JSON array only with actual array indexes in the order of relevance.`;
       const format = [3, 1, 4];
 
       const parsedRankings = await chatController.backgroundTask.run({ prompt, format });
