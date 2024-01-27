@@ -1,17 +1,7 @@
 const fileType = require('file-type').fromBuffer;
 const readChunkSync = require('read-chunk').sync;
 const reader = require('any-text');
-const pdfjsLib = require('pdfjs-dist/build/pdf');
 const { isTextFile } = require('../utils');
-
-async function readPDFFile(filePath) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = path.resolve(__dirname, '../node_modules/pdfjs-dist/build/pdf.worker.js');
-
-  const data = new Uint8Array(fs.readFileSync(filePath));
-  const doc = await pdfjsLib.getDocument({ data }).promise;
-  const pageTexts = Array.from({ length: doc.numPages }, async (v, i) => (await (await doc.getPage(i + 1)).getTextContent()).items.map((token) => token.str).join(''));
-  return (await Promise.all(pageTexts)).join('\n');
-}
 
 async function readFile(filepath) {
   try {
@@ -21,14 +11,11 @@ async function readFile(filepath) {
     if (type && ['docx', 'doc', 'xlsx', 'xls', 'txt', 'csv', 'json'].includes(type.ext)) {
       return await reader.getText(filepath);
     }
-    if (type && type.ext === 'pdf') {
-      return readPDFFile(filepath);
-    }
     // This is not a known binary file type
     if (isTextFile(buffer)) {
       return await readTextFile(filepath);
     }
-    chatController.chat.addFrontendMessage('error', `Binary files are not supported (${basename})<br>ChatGPT can only understand text based files like .txt, .docx, .pdf, .csv, .json, .js, .py etc.`);
+    chatController.chat.addFrontendMessage('error', `Binary files are not supported (${basename})<br>ChatGPT can only understand text based files like .txt, .docx, .csv, .json, .js, .py etc.`);
   } catch (err) {
     chatController.chat.addFrontendMessage('error', `An error occurred reading the file: ${err.message}`);
     console.error(err);
