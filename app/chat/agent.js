@@ -20,12 +20,13 @@ class Agent {
     const recentProjects = this.projectController.getProjects().slice(0, 10);
 
     recentProjects.forEach((project) => {
+      const projectPath = JSON.stringify(project.path).slice(1, -1);
       recentProjectsContent += `
-      <div class="row">
-        <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${project.path}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
-        <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${project.path}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
-        <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${project.path}</div>
-      </div>`;
+        <div class="row">
+          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
+          <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
+          <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${projectPath}</div>
+        </div>`;
     });
 
     if (this.projectController.currentProject) {
