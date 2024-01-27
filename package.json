@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.21.0",
+  "version": "5.21.4",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -47,6 +47,8 @@
           ]
         }
       ],
+      "publisherName": "Alexander Hedrevich",
+      "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": true,
       "artifactName": "${productName}.${ext}"
     },
@@ -107,7 +109,7 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.3.1",
     "electron": "^27.3.0",
-    "electron-builder": "^24.9.1",
+    "electron-builder": "^22.11.11",
     "electron-notarize": "^1.2.2",
     "node-gyp": "^10.0.1",
     "prettier": "^3.0.1"

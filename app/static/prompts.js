@@ -34,7 +34,7 @@ Don't guess or assume file content before overwriting it to make some changes.
 Any new required task dependencies should be installed locally.
 
 When an error occurs: first provide an explanation of why the error occurred, then the best way on how to fix it. After that, list all potential files where code needs to be fixed and fix all errors.
-Use the correct syntax for the {osName} and {shellType} terminal.`;
+Use correct command specifically for the {osName} and {shellType} terminal in 'shell' function call.`;
 
 const codeFunctions = [
   {
