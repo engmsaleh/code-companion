@@ -8,10 +8,11 @@ const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
 const { getSystemInfo } = require('./utils');
-const { systemMessage, codeFunctions } = require('./static/prompts');
+const { systemMessage } = require('./static/prompts');
 const { reduceTokensUsage } = require('./static/constants');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./tools/background_task');
+const { toolDefinitions } = require('./tools/tools');
 
 const MAX_RETRIES = 3;
 const DEFAULT_SETTINGS = {
@@ -135,12 +136,13 @@ class ChatController {
     }
 
     try {
+      const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
       const callParams = {
         model,
         messages: api_messages,
         top_p: 0.1,
         stream: true,
-        functions: codeFunctions,
+        functions: enabledTools,
       };
 
       if (isDevelopment) {
@@ -360,7 +362,7 @@ class ChatController {
 
     this.buildSystemMessage();
     onboardingController.showAllTips();
-    this.agent.showWelcomeContent();
+    viewController.showWelcomeContent();
     viewController.onShow();
   }
 }

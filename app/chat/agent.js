@@ -1,9 +1,9 @@
 const fs = require('graceful-fs');
-const chatFunctions = require('../tools/tools');
 const path = require('path');
 const { withErrorHandling } = require('../utils');
 const SmartContext = require('./smart_context');
 const ProjectController = require('../project_controller');
+const { toolDefinitions, previewMessageMapping } = require('../tools/tools');
 
 class Agent {
   constructor() {
@@ -14,49 +14,9 @@ class Agent {
     this.userDecision = null;
   }
 
-  showWelcomeContent() {
-    let recentProjectsContent = '';
-    let currentProjectContent = '';
-    const recentProjects = this.projectController.getProjects().slice(0, 10);
-
-    recentProjects.forEach((project) => {
-      const projectPath = JSON.stringify(project.path).slice(1, -1);
-      recentProjectsContent += `
-        <div class="row">
-          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
-          <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
-          <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${projectPath}</div>
-        </div>`;
-    });
-
-    if (this.projectController.currentProject) {
-      currentProjectContent = `
-        <p><span class="me-3">${this.projectController.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${this.projectController.currentProject.path}</span></p>
-      `;
-    }
-
-    const welcomeContent = `
-      <div class="card mt-5">
-        <div class="card-body">
-          <h5 class="card-title">Projects</h5>
-          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Current</h6>
-          ${currentProjectContent || '<p class="text-secondary">Please select a project directory to proceed</p>'}
-          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Open project</h6>
-          <a href="#" class="card-link text-decoration-none" onclick="event.preventDefault(); viewController.selectDirectory();"><i class="bi bi-folder-plus me-2"></i>Open</a>
-          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Recent</h6>
-          <div class="container-fluid">
-            ${recentProjectsContent || '<p class="text-secondary">No recent projects</p>'}
-          </div>
-        </div>
-      </div>
-    `;
-    document.getElementById('output').innerHTML = welcomeContent;
-  }
-
   async waitForDecision(functionName) {
     this.userDecision = null;
-    const functionsRequiringApproval = ['create_or_overwrite_file', 'shell', 'replace'];
-    if (chatController.settings.approvalRequired && functionsRequiringApproval.includes(functionName)) {
+    if (chatController.settings.approvalRequired && toolDefinitions.find((tool) => tool.name === functionName).approvalRequired) {
       document.getElementById('messageInput').disabled = true;
       document.getElementById('approval_buttons').removeAttribute('hidden');
       return new Promise((resolve) => {
@@ -82,21 +42,17 @@ class Agent {
     }
 
     try {
-      this.addAssistantMessages(apiResponseMessage);
+      this.addResponseToChat(apiResponseMessage);
       if (apiResponseMessage.function_call) {
         const decision = await this.waitForDecision(apiResponseMessage.function_call.name);
         if (decision) {
-          const { frontendMessage, backendMessage } = await this.callFunction(apiResponseMessage.function_call);
-          if (backendMessage) {
-            chatController.chat.addBackendMessage('function', backendMessage, null, apiResponseMessage.function_call.name);
-            if (frontendMessage) {
-              chatController.chat.addFrontendMessage('function', frontendMessage);
-            }
+          const functionCallResult = await this.callFunction(apiResponseMessage.function_call);
+          if (functionCallResult) {
+            chatController.chat.addBackendMessage('function', functionCallResult, null, apiResponseMessage.function_call.name);
             this.smartContext.updateContext(chatController.chat);
             await chatController.process('', false);
           } else {
             viewController.updateLoadingIndicator(false);
-            console.error('No output from function call');
           }
         } else {
           chatController.chat.addFrontendMessage('error', 'Action was rejected');
@@ -116,38 +72,16 @@ class Agent {
     let result = '';
 
     try {
-      switch (functionName) {
-        case 'create_or_overwrite_file':
-          result = await chatFunctions.createFile(args);
-          break;
-        case 'replace':
-          result = await chatFunctions.replaceInFile(args);
-          break;
-        case 'read':
-          result = await chatFunctions.readFile(args);
-          break;
-        case 'shell':
-          result = await chatFunctions.shell(args);
-          break;
-        case 'search_code':
-          result = await chatFunctions.searchCode(args);
-          break;
-        case 'search_google':
-          result = await chatFunctions.googleSearch(args);
-          break;
-        case 'search_url':
-          result = await chatFunctions.searchURL(args);
-          break;
-        default:
-          console.error(`Unsupported function ${functionName}`);
+      const tool = toolDefinitions.find((tool) => tool.name === functionName);
+      if (tool) {
+        result = await tool.executeFunction(args);
+      } else {
+        throw new Error(`Tool with name ${functionName} not found.`);
       }
     } catch (error) {
       console.error(error);
       chatController.chat.addFrontendMessage('error', `Error occurred. ${error.message}`);
-      result = {
-        frontendMessage: 'An error occurred',
-        backendMessage: `Error: ${error.message}`,
-      };
+      result = `Error: ${error.message}`;
     } finally {
       viewController.updateLoadingIndicator(false);
       return result;
@@ -158,7 +92,7 @@ class Agent {
     try {
       return JSON.parse(functionCall.arguments);
     } catch (error) {
-      if (functionCall.name === 'shell') {
+      if (functionCall.name === 'run_shell_command') {
         return {
           command: functionCall.arguments,
         };
@@ -227,55 +161,20 @@ class Agent {
     return projectStateText;
   }
 
-  addAssistantMessages(apiResponseMessage) {
+  addResponseToChat(apiResponseMessage) {
     const messageContent = apiResponseMessage.content;
+    const functionCall = apiResponseMessage.function_call;
 
-    if (!apiResponseMessage.function_call && messageContent) {
+    if (messageContent) {
       chatController.chat.addMessage('assistant', messageContent);
-      return;
-    }
-    if (!apiResponseMessage.function_call) {
-      return;
     }
 
-    const functionName = apiResponseMessage.function_call.name;
-    const args = this.parseArguments(apiResponseMessage.function_call);
-    let codeToShow = '';
-    let commandDescription = '';
-
-    switch (functionName) {
-      case 'create_or_overwrite_file':
-        commandDescription = `Creating a file ${args.targetFile}`;
-        codeToShow = `\n\n\`\`\`\n${args.createText}\n\`\`\``;
-        break;
-      case 'replace':
-        commandDescription = `Updating ${args.targetFile}`;
-        for (const change of args.items) {
-          codeToShow += `\n\nReplacing:\n\`\`\`\n${change.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${change.replaceWith}\n\`\`\``;
-        }
-        break;
-      case 'read':
-        commandDescription = `Reading files ${args.targetFiles.join(', ')}`;
-        break;
-      case 'shell':
-        commandDescription = 'Executing shell command:';
-        codeToShow = `\n\n\`\`\`console\n${args.command}\n\`\`\``;
-        break;
-      case 'search_code':
-        commandDescription = `Searching project code for: '${args.query}'`;
-        break;
-      case 'search_google':
-        commandDescription = `Searching web for: '${args.queries[0]}'`;
-        break;
-      case 'search_url':
-        commandDescription = `Fetching webpage`;
-        break;
-      default:
-        console.error(`Unsupported function ${functionName}`);
+    if (functionCall) {
+      const args = this.parseArguments(functionCall);
+      const preview = previewMessageMapping(args)[functionCall.name];
+      chatController.chat.addFrontendMessage('assistant', `${messageContent ? messageContent : preview.message}\n${preview.code}`);
+      chatController.chat.addBackendMessage('assistant', messageContent, functionCall);
     }
-
-    chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, apiResponseMessage.function_call);
-    chatController.chat.addFrontendMessage('assistant', `${apiResponseMessage.content ? apiResponseMessage.content : commandDescription}\n${codeToShow}`);
   }
 }
 

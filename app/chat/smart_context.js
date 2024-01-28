@@ -36,7 +36,7 @@ class SmartContext {
   }
 
   reduceContextOfShellCommands() {
-    const shellCommands = this.chat.backendMessages.filter((message) => message.role === 'assistant' && message.function_call && message.function_call.name === 'shell').slice(0, -5);
+    const shellCommands = this.chat.backendMessages.filter((message) => message.role === 'assistant' && message.function_call && message.function_call.name === 'run_shell_command').slice(0, -5);
     shellCommands.forEach((message, index) => {
       const nextMessageIndex = this.getNextMessageIndex(message.id);
       if (nextMessageIndex > -1 && this.chat.backendMessages[nextMessageIndex].role === 'function') {
@@ -64,7 +64,7 @@ class SmartContext {
   }
 
   reduceFunctionResponseMessage(nextMessageIndex, targetFile) {
-    if (this.chat.backendMessages[nextMessageIndex].name === 'read') {
+    if (this.chat.backendMessages[nextMessageIndex].name === 'read_files') {
       const parsedContent = JSON.parse(this.chat.backendMessages[nextMessageIndex].content);
       const filteredContent = parsedContent.filter((content) => content.targetFile !== targetFile);
       if (filteredContent.length > 0) {
@@ -98,7 +98,12 @@ class SmartContext {
   getFileGroups() {
     const fileGroups = {};
     this.chat.backendMessages.forEach((message) => {
-      if (message.role === 'assistant' && message.function_call && ['create_or_overwrite_file', 'replace', 'read'].includes(message.function_call.name) && message.function_call.arguments !== '-') {
+      if (
+        message.role === 'assistant' &&
+        message.function_call &&
+        ['create_or_overwrite_file', 'replace_string_in_file', 'read_files'].includes(message.function_call.name) &&
+        message.function_call.arguments !== '-'
+      ) {
         const { targetFile, targetFiles } = JSON.parse(message.function_call.arguments);
         const targetFilesArray = [targetFile, ...(targetFiles || [])].filter(Boolean);
         targetFilesArray.forEach((targetFile) => {
