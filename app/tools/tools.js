@@ -6,12 +6,197 @@ const axios = require('axios');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
 
-function respondTargetFileNotProvided() {
-  return {
-    frontendMessage: 'File name was not provided.',
-    backendMessage: 'Please provide a target file name in a correct format.',
-  };
-}
+const toolDefinitions = [
+  {
+    name: 'create_or_overwrite_file',
+    description: 'Create or overwrite a file with new content',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetFile: {
+          type: 'string',
+          description: 'File path',
+        },
+        createText: {
+          type: 'string',
+          description: `Output the entire completed source code for a file in a single step. The code should be fully functional, with no placeholders. Always use correct indentation and new lines.`,
+        },
+      },
+      required: ['targetFile', 'createText'],
+    },
+    executeFunction: createFile,
+    enabled: true,
+    approvalRequired: true,
+  },
+  {
+    name: 'replace_string_in_file',
+    description: 'Replace a string (or code) with another string, the rest of the file content will remain the same.',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              findString: {
+                type: 'string',
+                description: 'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
+              },
+              replaceWith: {
+                type: 'string',
+                description: 'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
+              },
+              replaceAll: {
+                type: 'boolean',
+                description: 'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
+              },
+            },
+            required: ['targetFile', 'findString', 'replaceWith', 'replaceAll'],
+          },
+        },
+        targetFile: {
+          type: 'string',
+          description: 'File path',
+        },
+      },
+      required: ['items'],
+    },
+    executeFunction: replaceInFile,
+    enabled: true,
+    approvalRequired: true,
+  },
+  {
+    name: 'read_files',
+    description: 'Read files contents',
+    parameters: {
+      type: 'object',
+      properties: {
+        targetFiles: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: "Array of valid file paths, can't be a directory path.",
+        },
+      },
+      required: ['targetFiles'],
+    },
+    executeFunction: readFile,
+    enabled: true,
+    approvalRequired: false,
+  },
+  {
+    name: 'run_shell_command',
+    description: 'Run shell command',
+    parameters: {
+      type: 'object',
+      properties: {
+        command: {
+          type: 'string',
+          description: `Example: 'ls -la'`,
+        },
+      },
+      required: ['command'],
+    },
+    executeFunction: shell,
+    enabled: true,
+    approvalRequired: true,
+  },
+  {
+    name: 'search_code',
+    description: 'Semantic code search in project code for relevant snippets of code',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: `Descriptive natural language search query. If user asked to search code, use entire unmodified user query as a search query.`,
+        },
+      },
+      required: ['query'],
+    },
+    executeFunction: searchCode,
+    enabled: true,
+    requiresApproval: false,
+  },
+  {
+    name: 'search_google',
+    description: `Search Google`,
+    parameters: {
+      type: 'object',
+      properties: {
+        queries: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'Long search queries. Provide at least three.',
+        },
+      },
+      required: ['queries'],
+    },
+    executeFunction: googleSearch,
+    enabled: true,
+    requiresApproval: true,
+  },
+  {
+    name: 'search_url',
+    description: `Search content of a webpage for a relevant information`,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: `Descriptive natural language search query.`,
+        },
+        url: {
+          type: 'string',
+          description: `URL of the webpage to search.`,
+        },
+      },
+      required: ['query', 'url'],
+    },
+    executeFunction: searchURL,
+    enabled: false,
+    requiresApproval: true,
+  },
+];
+
+const previewMessageMapping = (args) => ({
+  create_or_overwrite_file: {
+    message: `Creating a file ${args.targetFile}`,
+    code: `\`\`\`\n${args.createText}\n\`\`\``,
+  },
+  replace_string_in_file: {
+    message: `Updating ${args.targetFile}`,
+    code: args.items
+      ? args.items.reduce((acc, change) => {
+          return acc + `\n\nReplacing:\n\`\`\`\n${change.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${change.replaceWith}\n\`\`\``;
+        }, '')
+      : '',
+  },
+  read_files: {
+    message: `Reading files ${args.targetFiles ? args.targetFiles.join(', ') : 'No files specified'}`,
+    code: '',
+  },
+  run_shell_command: {
+    message: 'Executing shell command:',
+    code: `\n\n\`\`\`console\n${args.command}\n\`\`\``,
+  },
+  search_code: {
+    message: `Searching project code for: '${args.query}'`,
+    code: '',
+  },
+  search_google: {
+    message: `Searching web for: '${args.queries ? args.queries[0] : 'No query specified'}'`,
+    code: '',
+  },
+  search_url: {
+    message: `Fetching webpage`,
+    code: '',
+  },
+});
 
 async function createFile({ targetFile, createText }) {
   if (!targetFile) {
@@ -23,10 +208,9 @@ async function createFile({ targetFile, createText }) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
   fs.writeFileSync(filePath, createText);
-  return {
-    frontendMessage: `File ${await openFileLink(filePath)} created successfully`,
-    backendMessage: `File '${targetFile}' created successfully`,
-  };
+  chatController.chat.addFrontendMessage('function', `File ${await openFileLink(filePath)} created successfully`);
+
+  return `File '${targetFile}' created successfully`;
 }
 
 async function replaceInFile({ targetFile, items }) {
@@ -90,15 +274,9 @@ async function replaceInFile({ targetFile, items }) {
   } else {
     frontendMessage = `File ${await openFileLink(filePath)} updated successfully. ${totalMatches} matches replaced`;
   }
+  chatController.chat.addFrontendMessage('function', frontendMessage);
 
-  return {
-    frontendMessage,
-    backendMessage: JSON.stringify({
-      targetFile,
-      content,
-      itemResults,
-    }),
-  };
+  return JSON.stringify({ targetFile, content, itemResults });
 }
 
 async function readFile({ targetFiles }) {
@@ -139,10 +317,9 @@ async function readFile({ targetFiles }) {
   if (unreadFiles.length > 0) {
     frontendMessage += `<br>Could not read ${unreadFiles.length} file(s): ${unreadFiles.join(', ')}`;
   }
-  return {
-    frontendMessage,
-    backendMessage: JSON.stringify(result),
-  };
+  chatController.chat.addFrontendMessage('function', frontendMessage);
+
+  return JSON.stringify(result);
 }
 
 async function shell({ command }) {
@@ -159,10 +336,7 @@ async function shell({ command }) {
   commandResult = `Command that was executed in terminal: '${command}'\nTerminal command output was:\n'${commandResult}'`;
   viewController.updateLoadingIndicator(false);
 
-  return {
-    frontendMessage: '',
-    backendMessage: commandResult,
-  };
+  return commandResult;
 }
 
 async function searchCode({ query, rerank = true, count = 20 }) {
@@ -176,12 +350,9 @@ async function searchCode({ query, rerank = true, count = 20 }) {
     frontendMessage = `Checked ${uniqueFiles.length} files:<br>${await Promise.all(uniqueFiles.map(async (filePath) => await openFileLink(filePath))).then((fileLinks) => fileLinks.join('<br>'))}`;
     backendMessage = JSON.stringify(results);
   }
+  chatController.chat.addFrontendMessage('function', frontendMessage || 'No results found');
 
-  return {
-    frontendMessage: frontendMessage || 'No results found',
-    backendMessage: backendMessage || 'No results found',
-    uniqueFiles,
-  };
+  return backendMessage || 'No results found';
 }
 
 async function googleSearch({ queries }) {
@@ -205,18 +376,14 @@ async function googleSearch({ queries }) {
     if (!firstCompressedResult) firstCompressedResult = compressedResult;
 
     if (await checkIfAnswersQuery(queries[0], compressedResult)) {
-      return {
-        frontendMessage: `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`,
-        backendMessage: JSON.stringify(compressedResult),
-      };
+      chatController.chat.addFrontendMessage('function', `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`);
+      return JSON.stringify(compressedResult);
     }
   }
 
   // Return first compressed result if no result meets the condition
-  return {
-    frontendMessage: `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`,
-    backendMessage: JSON.stringify(firstCompressedResult),
-  };
+  chatController.chat.addFrontendMessage('function', `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`);
+  return JSON.stringify(firstCompressedResult);
 }
 
 async function getFilePath(targetFile) {
@@ -301,7 +468,15 @@ Does this result answer search query question?`;
   return result !== false;
 }
 
+function respondTargetFileNotProvided() {
+  chatController.chat.addFrontendMessage('function', 'File name was not provided.');
+
+  return 'Please provide a target file name in a correct format.';
+}
+
 module.exports = {
+  toolDefinitions,
+  previewMessageMapping,
   createFile,
   replaceInFile,
   readFile,

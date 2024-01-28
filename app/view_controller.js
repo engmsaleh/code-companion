@@ -108,28 +108,30 @@ class ViewController {
     const roleIcons = {
       user: 'person',
       command: 'terminal',
-      function: 'function',
+      function: null,
       error: 'exclamation-triangle text-warning',
       info: 'info-circle',
       file: 'paperclip',
       onboarding: 'info-circle',
-      default: 'chat-right-dots text-success',
+      assistant: 'chat-right-dots text-success',
     };
 
-    const roleIcon = roleIcons[item.role] || roleIcons['default'];
-    return this.createMessageHTML(roleIcon, item.content, buttons);
+    const roleIcon = roleIcons[item.role];
+    const spacing = item.role === 'function' ? '0' : '3';
+    const bsClass = item.role === 'function' ? 'text-muted' : '';
+    return this.createMessageHTML(spacing, roleIcon, item.content, bsClass, buttons);
   }
 
-  createMessageHTML(roleIcon, content, buttons = '') {
-    return `<div class="row mt-3">
-            <div class="col-auto pt-3">
-                <i class="bi bi-${roleIcon}"></i>
+  createMessageHTML(spacing, roleIcon, content, bsClass, buttons = '') {
+    return `<div class="row mt-${spacing}">
+              <div class="col-auto pt-${spacing}">
+                ${roleIcon ? `<i class="bi bi-${roleIcon}"></i>` : '&nbsp;'}
               </div>
-            <div class="col pt-3">
+              <div class="col pt-${spacing} ${bsClass}">
                 ${content ? marked.parse(content) : ''}
-            </div>
-            ${buttons}
-          </div>`;
+              </div>
+              ${buttons}
+            </div>`;
   }
 
   changeTheme(theme) {
@@ -187,6 +189,46 @@ class ViewController {
   openFileInIDE(filePath) {
     const terminalCommand = `${chatController.settings.commandToOpenFile} "${filePath}"`;
     chatController.terminalSession.executeCommandWithoutOutput(terminalCommand);
+  }
+
+  showWelcomeContent() {
+    let recentProjectsContent = '';
+    let currentProjectContent = '';
+    const projectController = chatController.agent.projectController;
+    const recentProjects = projectController.getProjects().slice(0, 10);
+
+    recentProjects.forEach((project) => {
+      const projectPath = JSON.stringify(project.path).slice(1, -1);
+      recentProjectsContent += `
+        <div class="row">
+          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
+          <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
+          <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${projectPath}</div>
+        </div>`;
+    });
+
+    if (projectController.currentProject) {
+      currentProjectContent = `
+        <p><span class="me-3">${projectController.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${projectController.currentProject.path}</span></p>
+      `;
+    }
+
+    const welcomeContent = `
+      <div class="card mt-5">
+        <div class="card-body">
+          <h5 class="card-title">Projects</h5>
+          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Current</h6>
+          ${currentProjectContent || '<p class="text-secondary">Please select a project directory to proceed</p>'}
+          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Open project</h6>
+          <a href="#" class="card-link text-decoration-none" onclick="event.preventDefault(); viewController.selectDirectory();"><i class="bi bi-folder-plus me-2"></i>Open</a>
+          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Recent</h6>
+          <div class="container-fluid">
+            ${recentProjectsContent || '<p class="text-secondary">No recent projects</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('output').innerHTML = welcomeContent;
   }
 }
 
