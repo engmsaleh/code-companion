@@ -105,29 +105,27 @@ class ViewController {
     const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})"><i class="bi bi-trash"></i></button>`;
     const buttons = `<div class="col-auto pt-3">${deleteMessagesButton}${copyButton}</div>`;
 
-    const roleIcons = {
-      user: 'person',
-      command: 'terminal',
-      function: null,
-      error: 'exclamation-triangle text-warning',
-      info: 'info-circle',
-      file: 'paperclip',
-      onboarding: 'info-circle',
-      assistant: 'chat-right-dots text-success',
+    const roleSettings = {
+      user: { icon: 'person', rowClass: 'bg-light-subtle rounded mt-3', rowPadding: '3' },
+      command: { icon: 'terminal', rowClass: 'mt-3', rowPadding: '3' },
+      function: { icon: null, rowClass: 'text-muted ms-1', rowPadding: '0' },
+      error: { icon: 'exclamation-triangle text-warning', rowClass: 'mt-3', rowPadding: '3' },
+      info: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
+      file: { icon: 'paperclip', rowClass: 'mt-3', rowPadding: '3' },
+      onboarding: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
+      assistant: { icon: 'chat-right-dots text-success', rowClass: 'mt-3', rowPadding: '3' },
     };
 
-    const roleIcon = roleIcons[item.role];
-    const spacing = item.role === 'function' ? '0' : '3';
-    const bsClass = item.role === 'function' ? 'text-muted' : '';
-    return this.createMessageHTML(spacing, roleIcon, item.content, bsClass, buttons);
+    const roleSetting = roleSettings[item.role];
+    return this.createMessageHTML(roleSetting, item.content, buttons);
   }
 
-  createMessageHTML(spacing, roleIcon, content, bsClass, buttons = '') {
-    return `<div class="row mt-${spacing}">
-              <div class="col-auto pt-${spacing}">
-                ${roleIcon ? `<i class="bi bi-${roleIcon}"></i>` : '&nbsp;'}
+  createMessageHTML(roleSetting, content, buttons = '') {
+    return `<div class="row ${roleSetting.rowClass}">
+              <div class="col-auto pt-${roleSetting.rowPadding}">
+                ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>
-              <div class="col pt-${spacing} ${bsClass}">
+              <div class="col pt-${roleSetting.rowPadding}">
                 ${content ? marked.parse(content) : ''}
               </div>
               ${buttons}
