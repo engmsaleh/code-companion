@@ -144,6 +144,7 @@ function createWindow() {
   win.on('show', () => {
     win.webContents.executeJavaScript('viewController.onShow()');
     if (!isUpdateInProgress) {
+      isUpdateInProgress = true;
       autoUpdater.checkForUpdates();
     }
   });
