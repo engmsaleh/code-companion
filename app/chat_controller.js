@@ -12,7 +12,7 @@ const { systemMessage } = require('./static/prompts');
 const { reduceTokensUsage } = require('./static/constants');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./tools/background_task');
-const { toolDefinitions } = require('./tools/tools');
+const { toolDefinitions, formattedTools } = require('./tools/tools');
 
 const MAX_RETRIES = 3;
 const DEFAULT_SETTINGS = {
@@ -43,6 +43,7 @@ class ChatController {
     this.terminalSession = new TerminalSession();
     this.processMessageChange = this.processMessageChange.bind(this);
     this.submitMessage = this.submitMessage.bind(this);
+    this.formattedTools = formattedTools();
   }
 
   initializeOpenAIAPI() {
@@ -131,42 +132,21 @@ class ChatController {
   }
 
   async callAPI(api_messages, model = this.settings.selectedModel, retryCount = 0) {
-    if (isDevelopment) {
-      console.log(`Calling API with messages (${this.chat.countTokens(JSON.stringify(api_messages))} tokens)`, api_messages);
-    }
-
     try {
-      const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
       const callParams = {
         model,
         messages: api_messages,
         top_p: 0.1,
         stream: true,
-        functions: enabledTools,
+        tools: this.formattedTools.map((tool) => ({ type: 'function', function: tool })),
       };
 
       if (isDevelopment) {
         callParams.seed = 69;
+        console.log(`Calling API (${this.chat.countTokens(JSON.stringify(api_messages))} tokens)`, callParams);
       }
 
-      // calculate tokens for last request
-      this.lastRequestTokens = this.chat.countTokens(JSON.stringify(api_messages));
-      this.conversationTokens += this.lastRequestTokens;
-
-      if (this.lastRequestTokens > this.settings.maxTokensPerRequest) {
-        throw new Error(
-          `\nThe number of tokens in the current request (${this.lastRequestTokens}) exceeds maximum value in settings: ${this.settings.maxTokensPerRequest}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
-          ${reduceTokensUsage}
-          `,
-        );
-      }
-      if (this.conversationTokens > this.settings.maxTokensPerChat) {
-        throw new Error(
-          `The total number of tokens used in this chat (${this.conversationTokens}) exceeds ${this.settings.maxTokensPerChat}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
-          ${reduceTokensUsage}
-          `,
-        );
-      }
+      this.processTokensUsage(callParams);
 
       const stream = await this.openai.beta.chat.completions.stream(callParams, {
         maxRetries: this.MAX_RETRIES,
@@ -192,6 +172,7 @@ class ChatController {
       }
 
       viewController.updateFooterMessage();
+
       return chatCompletion;
     } catch (error) {
       console.error('Error during openai.createChatCompletion:', error);
@@ -208,6 +189,37 @@ class ChatController {
         throw error;
       }
     }
+  }
+
+  processTokensUsage(callParams) {
+    this.lastRequestTokens = this.chat.countTokens(JSON.stringify(callParams.messages));
+    this.conversationTokens += this.lastRequestTokens;
+
+    if (this.lastRequestTokens > this.settings.maxTokensPerRequest) {
+      throw new Error(
+        `\nThe number of tokens in the current request (${this.lastRequestTokens}) exceeds maximum value in settings: ${this.settings.maxTokensPerRequest}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
+          ${reduceTokensUsage}
+          `,
+      );
+    }
+    if (this.conversationTokens > this.settings.maxTokensPerChat) {
+      throw new Error(
+        `The total number of tokens used in this chat (${this.conversationTokens}) exceeds ${this.settings.maxTokensPerChat}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
+          ${reduceTokensUsage}
+          `,
+      );
+    }
+  }
+
+  countTokensForTools() {
+    const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
+    const tokensJson = enabledTools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    }));
+
+    return toolsTokens;
   }
 
   retry() {
@@ -254,7 +266,7 @@ class ChatController {
 
       if (!apiResponse) {
         console.error('No response from API');
-        return;
+        throw new Error('No response from API');
       }
 
       if (apiResponse.choices[0].finish_reason === 'length') {

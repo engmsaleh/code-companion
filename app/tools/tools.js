@@ -22,7 +22,6 @@ const toolDefinitions = [
           description: `Output the entire completed source code for a file in a single step. The code should be fully functional, with no placeholders. Always use correct indentation and new lines.`,
         },
       },
-      required: ['targetFile', 'createText'],
     },
     executeFunction: createFile,
     enabled: true,
@@ -30,57 +29,42 @@ const toolDefinitions = [
   },
   {
     name: 'replace_string_in_file',
-    description: 'Replace a string (or code) with another string, the rest of the file content will remain the same.',
+    description: 'Replace a string with another string, the rest of the file content will remain the same.',
     parameters: {
       type: 'object',
       properties: {
-        items: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              findString: {
-                type: 'string',
-                description: 'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
-              },
-              replaceWith: {
-                type: 'string',
-                description: 'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
-              },
-              replaceAll: {
-                type: 'boolean',
-                description: 'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
-              },
-            },
-            required: ['targetFile', 'findString', 'replaceWith', 'replaceAll'],
-          },
-        },
         targetFile: {
           type: 'string',
-          description: 'File path',
+        },
+        findString: {
+          type: 'string',
+          description: 'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
+        },
+        replaceWith: {
+          type: 'string',
+          description: 'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
+        },
+        replaceAll: {
+          type: 'boolean',
+          description: 'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
         },
       },
-      required: ['items'],
+      required: ['targetFile', 'findString', 'replaceWith', 'replaceAll'],
     },
     executeFunction: replaceInFile,
     enabled: true,
     approvalRequired: true,
   },
   {
-    name: 'read_files',
-    description: 'Read files contents',
+    name: 'read_file',
+    description: 'Read file contents',
     parameters: {
       type: 'object',
       properties: {
-        targetFiles: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: "Array of valid file paths, can't be a directory path.",
+        targetFile: {
+          type: 'string',
         },
       },
-      required: ['targetFiles'],
     },
     executeFunction: readFile,
     enabled: true,
@@ -94,10 +78,8 @@ const toolDefinitions = [
       properties: {
         command: {
           type: 'string',
-          description: `Example: 'ls -la'`,
         },
       },
-      required: ['command'],
     },
     executeFunction: shell,
     enabled: true,
@@ -114,7 +96,6 @@ const toolDefinitions = [
           description: `Descriptive natural language search query. If user asked to search code, use entire unmodified user query as a search query.`,
         },
       },
-      required: ['query'],
     },
     executeFunction: searchCode,
     enabled: true,
@@ -134,7 +115,6 @@ const toolDefinitions = [
           description: 'Long search queries. Provide at least three.',
         },
       },
-      required: ['queries'],
     },
     executeFunction: googleSearch,
     enabled: true,
@@ -169,15 +149,11 @@ const previewMessageMapping = (args) => ({
     code: `\`\`\`\n${args.createText}\n\`\`\``,
   },
   replace_string_in_file: {
-    message: `Updating ${args.targetFile}`,
-    code: args.items
-      ? args.items.reduce((acc, change) => {
-          return acc + `\n\nReplacing:\n\`\`\`\n${change.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${change.replaceWith}\n\`\`\``;
-        }, '')
-      : '',
+    message: `Updating ${args.targetFile}\n\n`,
+    code: `Replacing:\n\`\`\`\n${args.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
   },
-  read_files: {
-    message: `Reading files ${args.targetFiles ? args.targetFiles.join(', ') : 'No files specified'}`,
+  read_file: {
+    message: `Reading file ${args.targetFile ? args.targetFile : 'No files specified'}`,
     code: '',
   },
   run_shell_command: {
@@ -213,113 +189,57 @@ async function createFile({ targetFile, createText }) {
   return `File '${targetFile}' created successfully`;
 }
 
-async function replaceInFile({ targetFile, items }) {
+async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }) {
   if (!targetFile) {
     return respondTargetFileNotProvided();
   }
 
   const filePath = await getFilePath(targetFile);
-  let result = {};
   if (!fs.existsSync(filePath)) {
-    result = {
-      targetFile,
-      content: `Update failed. '${targetFile}' (absolute path is '${filePath}') is not a valid file path. Please use a valid file path.`,
-    };
-    return {
-      frontendMessage: `Unable to update file '${targetFile}'. File does not exist!`,
-      backendMessage: JSON.stringify(result),
-    };
+    const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
+    chatController.chat.addFrontendMessage('function', doesntExistMessage);
+    return doesntExistMessage;
   }
 
   let content = fs.readFileSync(filePath, 'utf8');
-  let error = false;
-  let totalMatches = 0;
-  let frontendMessage = '';
-  const itemResults = [];
+  const matches = (content.split(findString) || []).length - 1;
+  if (matches === 0) {
+    const findStringNotPresentMessage = `This string '${findString}' is not present in the file`;
+    chatController.chat.addFrontendMessage('function', findStringNotPresentMessage);
 
-  for (const item of items) {
-    const { findString, replaceWith, replaceAll } = item;
-    const matches = (content.split(findString) || []).length - 1;
+    return findStringNotPresentMessage;
+  }
 
-    if (matches === 0) {
-      error = true;
-      itemResults.push({
-        item: findString,
-        result: "findString is not present in the 'content' field above. Use a different findString strictly present in the file",
-      });
-    } else {
-      totalMatches += matches;
-      if (replaceAll) {
-        content = content.split(findString).join(replaceWith);
-        itemResults.push({
-          item: findString,
-          result: `${matches} matches replaced`,
-        });
-      } else {
-        content = content.replace(findString, replaceWith);
-        itemResults.push({
-          item: findString,
-          result: 'First match replaced',
-        });
-      }
-    }
+  if (replaceAll) {
+    const find = new RegExp(findString, 'g');
+    content = content.replace(find, replaceWith);
+  } else {
+    content = content.replace(findString, replaceWith);
   }
   fs.writeFileSync(filePath, content);
 
-  if (error) {
-    frontendMessage = `The following content was not found in the file: ${itemResults
-      .filter((item) => item.result.includes('not present'))
-      .map((item) => `<pre class="hljs mb-3"><code>${item.item}</code></pre>`)
-      .join('<br /><br />')}`;
-  } else {
-    frontendMessage = `File ${await openFileLink(filePath)} updated successfully. ${totalMatches} matches replaced`;
-  }
-  chatController.chat.addFrontendMessage('function', frontendMessage);
+  const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
+  chatController.chat.addFrontendMessage('function', successMessage);
 
-  return JSON.stringify({ targetFile, content, itemResults });
+  return successMessage;
 }
 
-async function readFile({ targetFiles }) {
-  if (!targetFiles || targetFiles.length === 0) {
+async function readFile({ targetFile }) {
+  if (!targetFile) {
     return respondTargetFileNotProvided();
   }
 
-  const result = [];
-  const readFiles = [];
-  const unreadFiles = [];
-  let tokensRead = 0;
-
-  for (let i = 0; i < targetFiles.length; i++) {
-    const filePath = await getFilePath(targetFiles[i]);
-    if (!fs.existsSync(filePath)) {
-      unreadFiles.push(targetFiles[i]);
-      result.push({
-        targetFile: targetFiles[i],
-        content: 'File does not exist',
-      });
-      continue;
-    }
-    readFiles.push(filePath);
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    tokensRead += chatController.chat.countTokens(fileContent);
-    result.push({
-      targetFile: targetFiles[i],
-      content: fileContent,
-    });
+  const filePath = await getFilePath(targetFile);
+  if (!fs.existsSync(filePath)) {
+    const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
+    chatController.chat.addFrontendMessage('function', doesntExistMessage);
+    return doesntExistMessage;
   }
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  tokensRead = chatController.chat.countTokens(fileContent);
+  chatController.chat.addFrontendMessage('function', `Read ${await openFileLink(filePath)} file (${tokensRead} tokens)`);
 
-  let frontendMessage = '';
-  if (readFiles.length > 0) {
-    frontendMessage += `Read ${readFiles.length} file(s): ${await Promise.all(readFiles.map(async (filePath) => await openFileLink(filePath))).then((fileLinks) =>
-      fileLinks.join(', '),
-    )} (total tokens: ${tokensRead})`;
-  }
-  if (unreadFiles.length > 0) {
-    frontendMessage += `<br>Could not read ${unreadFiles.length} file(s): ${unreadFiles.join(', ')}`;
-  }
-  chatController.chat.addFrontendMessage('function', frontendMessage);
-
-  return JSON.stringify(result);
+  return fileContent;
 }
 
 async function shell({ command }) {
@@ -339,20 +259,26 @@ async function shell({ command }) {
   return commandResult;
 }
 
-async function searchCode({ query, rerank = true, count = 20 }) {
-  let results = await chatController.agent.projectController.searchEmbeddings({ query, count, rerank });
+async function searchCode({ query, rerank = false, count = 20 }) {
   let frontendMessage = '';
   let backendMessage = '';
   let uniqueFiles = [];
+
+  let results = await chatController.agent.projectController.searchEmbeddings({ query, count, rerank });
+  console.log(results);
+
   if (results && results.length > 0) {
     const files = results.map((result) => result.filePath);
     uniqueFiles = [...new Set(files)];
     frontendMessage = `Checked ${uniqueFiles.length} files:<br>${await Promise.all(uniqueFiles.map(async (filePath) => await openFileLink(filePath))).then((fileLinks) => fileLinks.join('<br>'))}`;
     backendMessage = JSON.stringify(results);
+    chatController.chat.addFrontendMessage('function', frontendMessage);
+    return backendMessage;
   }
-  chatController.chat.addFrontendMessage('function', frontendMessage || 'No results found');
 
-  return backendMessage || 'No results found';
+  const noResultsMessage = `No results found`;
+  chatController.chat.addFrontendMessage('function', noResultsMessage);
+  return noResultsMessage;
 }
 
 async function googleSearch({ queries }) {
@@ -474,8 +400,19 @@ function respondTargetFileNotProvided() {
   return 'Please provide a target file name in a correct format.';
 }
 
+function formattedTools() {
+  const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
+
+  return enabledTools.map(({ name, description, parameters }) => ({
+    name,
+    description,
+    parameters,
+  }));
+}
+
 module.exports = {
   toolDefinitions,
+  formattedTools,
   previewMessageMapping,
   createFile,
   replaceInFile,

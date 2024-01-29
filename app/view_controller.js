@@ -121,7 +121,7 @@ class ViewController {
   }
 
   createMessageHTML(roleSetting, content, buttons = '') {
-    return `<div class="row ${roleSetting.rowClass}">
+    return `<div class="row ${roleSetting.rowClass} align-items-start">
               <div class="col-auto pt-${roleSetting.rowPadding}">
                 ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>

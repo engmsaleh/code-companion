@@ -39,18 +39,21 @@ class Chat {
     return message;
   }
 
-  addBackendMessage(role, content, functionCall = null, name = null) {
+  addBackendMessage(role, content, toolCalls = null, name = null, toolCallId = null) {
     this.lastBackendMessageId = this.getNextId();
     const message = {
       id: this.lastBackendMessageId,
       role,
       content,
     };
-    if (functionCall) {
-      message.function_call = functionCall;
+    if (toolCalls) {
+      message.tool_calls = toolCalls;
     }
     if (name) {
       message.name = name;
+    }
+    if (toolCallId) {
+      message.tool_call_id = toolCallId;
     }
     this.backendMessages.push(message);
     return message;

@@ -1,7 +1,6 @@
 const fs = require('graceful-fs');
 const path = require('path');
 const { withErrorHandling } = require('../utils');
-const SmartContext = require('./smart_context');
 const ProjectController = require('../project_controller');
 const { toolDefinitions, previewMessageMapping } = require('../tools/tools');
 
@@ -9,9 +8,57 @@ class Agent {
   constructor() {
     this.currentWorkingDir = os.homedir();
     this.projectState = {};
-    this.smartContext = new SmartContext();
     this.projectController = new ProjectController();
     this.userDecision = null;
+  }
+
+  async runAgent(apiResponseMessage) {
+    if (chatController.stopProcess || !apiResponseMessage) {
+      return;
+    }
+
+    try {
+      const toolCalls = apiResponseMessage.tool_calls;
+      if (apiResponseMessage.content) {
+        chatController.chat.addFrontendMessage('assistant', apiResponseMessage.content);
+      }
+      chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, toolCalls);
+
+      if (toolCalls) {
+        const userRejected = await this.runTools(toolCalls, apiResponseMessage.content);
+        if (!userRejected) {
+          await chatController.process('', false);
+        }
+      }
+    } catch (error) {
+      chatController.handleError(error);
+    }
+  }
+
+  async runTools(toolCalls, messageContent) {
+    let isUserRejected = false;
+
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.function.name;
+      this.showToolCallPreview(toolCall, messageContent);
+      const decision = await this.waitForDecision(functionName);
+
+      if (decision) {
+        const functionCallResult = await this.callFunction(toolCall);
+        if (functionCallResult) {
+          chatController.chat.addBackendMessage('tool', functionCallResult, null, functionName, toolCall.id);
+        } else {
+          viewController.updateLoadingIndicator(false);
+        }
+      } else {
+        isUserRejected = true;
+        chatController.chat.addFrontendMessage('error', 'Action was rejected');
+        chatController.chat.addBackendMessage('tool', 'User rejected this function call', null, functionName, toolCall.id);
+      }
+      this.userDecision = null;
+    }
+
+    return isUserRejected;
   }
 
   async waitForDecision(functionName) {
@@ -36,39 +83,10 @@ class Agent {
     }
   }
 
-  async runAgent(apiResponseMessage) {
-    if (chatController.stopProcess || !apiResponseMessage) {
-      return;
-    }
-
-    try {
-      this.addResponseToChat(apiResponseMessage);
-      if (apiResponseMessage.function_call) {
-        const decision = await this.waitForDecision(apiResponseMessage.function_call.name);
-        if (decision) {
-          const functionCallResult = await this.callFunction(apiResponseMessage.function_call);
-          if (functionCallResult) {
-            chatController.chat.addBackendMessage('function', functionCallResult, null, apiResponseMessage.function_call.name);
-            this.smartContext.updateContext(chatController.chat);
-            await chatController.process('', false);
-          } else {
-            viewController.updateLoadingIndicator(false);
-          }
-        } else {
-          chatController.chat.addFrontendMessage('error', 'Action was rejected');
-          chatController.chat.addBackendMessage('user', 'User rejected function call');
-        }
-        this.userDecision = null;
-      }
-    } catch (error) {
-      chatController.handleError(error);
-    }
-  }
-
-  async callFunction(functionCall) {
+  async callFunction(toolCall) {
     viewController.updateLoadingIndicator(true);
-    const functionName = functionCall.name;
-    const args = this.parseArguments(functionCall);
+    const functionName = toolCall.function.name;
+    const args = this.parseArguments(toolCall.function.arguments);
     let result = '';
 
     try {
@@ -88,9 +106,9 @@ class Agent {
     }
   }
 
-  parseArguments(functionCall) {
+  parseArguments(args) {
     try {
-      return JSON.parse(functionCall.arguments);
+      return JSON.parse(args);
     } catch (error) {
       if (functionCall.name === 'run_shell_command') {
         return {
@@ -161,20 +179,11 @@ class Agent {
     return projectStateText;
   }
 
-  addResponseToChat(apiResponseMessage) {
-    const messageContent = apiResponseMessage.content;
-    const functionCall = apiResponseMessage.function_call;
-
-    if (messageContent) {
-      chatController.chat.addMessage('assistant', messageContent);
-    }
-
-    if (functionCall) {
-      const args = this.parseArguments(functionCall);
-      const preview = previewMessageMapping(args)[functionCall.name];
-      chatController.chat.addFrontendMessage('assistant', `${messageContent ? messageContent : preview.message}\n${preview.code}`);
-      chatController.chat.addBackendMessage('assistant', messageContent, functionCall);
-    }
+  showToolCallPreview(toolCall, messageContent) {
+    const functionName = toolCall.function.name;
+    const args = this.parseArguments(toolCall.function.arguments);
+    const preview = previewMessageMapping(args)[functionName];
+    chatController.chat.addFrontendMessage('assistant', `${messageContent ? messageContent : preview.message}\n${preview.code}`);
   }
 }
 
