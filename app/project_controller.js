@@ -5,9 +5,9 @@ const Store = require('electron-store');
 const ignore = require('ignore');
 const ccignoreTemplate = require('./static/embeddings_ignore_patterns');
 const CodeEmbeddings = require('./tools/code_embeddings');
+const { EMBEDDINGS_VERSION } = require('./static/models_config');
 
 const LARGE_FILE_SIZE = 100000;
-const EMBEDDINGS_VERSION = 'v4';
 const addInstructionsModal = new bootstrap.Modal(document.getElementById('addInstructionsModal'));
 
 class ProjectController {

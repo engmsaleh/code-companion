@@ -7,9 +7,7 @@ const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const detect = require('language-detect');
 
 const { isTextFile } = require('../utils');
-
-const EMBEDDINGS_VERSION = 'v4';
-const EMBEDDINGS_MODEL_NAME = 'text-embedding-3-large';
+const { EMBEDDINGS_VERSION, EMBEDDINGS_MODEL_NAME } = require('../static/models_config');
 
 const detectedLanguageToSplitterMapping = {
   'C++': 'cpp',
@@ -69,6 +67,7 @@ class CodeEmbeddings {
   async updateEmbeddingsForFiles(filesList) {
     if (!this.openAIApiKey) return;
 
+    viewController.updateLoadingIndicator(true, `Indexing ${filesList.length} files with vector embeddings...`);
     const promises = filesList.map((file) => this.updateEmbedding(file));
     await Promise.all(promises);
     this.deleteEmbeddingsForFilesNotInList(filesList);
