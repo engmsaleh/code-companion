@@ -50,7 +50,6 @@ class ProjectController {
     // for saved chats, need to check
     if (chatController.chat.isEmpty()) {
       chatController.clearChat();
-      chatController.chat.addFrontendMessage('assistant', `Hello! How can I assist you today?`);
     }
 
     document.title = project.name + ' - CodeCompanion.AI';

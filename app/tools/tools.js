@@ -38,15 +38,18 @@ const toolDefinitions = [
         },
         findString: {
           type: 'string',
-          description: 'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
+          description:
+            'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
         },
         replaceWith: {
           type: 'string',
-          description: 'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
+          description:
+            'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
         },
         replaceAll: {
           type: 'boolean',
-          description: 'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
+          description:
+            'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
         },
       },
       required: ['targetFile', 'findString', 'replaceWith', 'replaceAll'],
@@ -86,60 +89,25 @@ const toolDefinitions = [
     approvalRequired: true,
   },
   {
-    name: 'search_code',
-    description: 'Semantic code search in project code for relevant snippets of code',
+    name: 'search',
+    description: 'Semantic search that can perform codebase search or google search',
     parameters: {
       type: 'object',
       properties: {
+        type: {
+          type: 'string',
+          enum: ['codebase', 'google'],
+          description: 'Type of search to perform',
+        },
         query: {
           type: 'string',
-          description: `Descriptive natural language search query. If user asked to search code, use entire unmodified user query as a search query.`,
+          description: `Descriptive natural language search query`,
         },
       },
     },
-    executeFunction: searchCode,
+    executeFunction: unifiedSearch,
     enabled: true,
     requiresApproval: false,
-  },
-  {
-    name: 'search_google',
-    description: `Search Google`,
-    parameters: {
-      type: 'object',
-      properties: {
-        queries: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: 'Long search queries. Provide at least three.',
-        },
-      },
-    },
-    executeFunction: googleSearch,
-    enabled: true,
-    requiresApproval: true,
-  },
-  {
-    name: 'search_url',
-    description: `Search content of a webpage for a relevant information`,
-    parameters: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: `Descriptive natural language search query.`,
-        },
-        url: {
-          type: 'string',
-          description: `URL of the webpage to search.`,
-        },
-      },
-      required: ['query', 'url'],
-    },
-    executeFunction: searchURL,
-    enabled: false,
-    requiresApproval: true,
   },
 ];
 
@@ -148,28 +116,20 @@ const previewMessageMapping = (args) => ({
     message: `Creating a file ${args.targetFile}`,
     code: `\`\`\`\n${args.createText}\n\`\`\``,
   },
+  read_file: {
+    message: `Reading a file ${args.targetFile ? args.targetFile : 'No files specified'}`,
+    code: '',
+  },
   replace_string_in_file: {
     message: `Updating ${args.targetFile}\n\n`,
     code: `Replacing:\n\`\`\`\n${args.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
-  },
-  read_file: {
-    message: `Reading file ${args.targetFile ? args.targetFile : 'No files specified'}`,
-    code: '',
   },
   run_shell_command: {
     message: 'Executing shell command:',
     code: `\n\n\`\`\`console\n${args.command}\n\`\`\``,
   },
-  search_code: {
-    message: `Searching project code for: '${args.query}'`,
-    code: '',
-  },
-  search_google: {
-    message: `Searching web for: '${args.queries ? args.queries[0] : 'No query specified'}'`,
-    code: '',
-  },
-  search_url: {
-    message: `Fetching webpage`,
+  search: {
+    message: `Searching ${args.type} for '${args.query}'`,
     code: '',
   },
 });
@@ -221,7 +181,7 @@ async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }
   const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
   chatController.chat.addFrontendMessage('function', successMessage);
 
-  return successMessage;
+  return `File ${filePath} updated successfully.`;
 }
 
 async function readFile({ targetFile }) {
@@ -237,7 +197,10 @@ async function readFile({ targetFile }) {
   }
   const fileContent = fs.readFileSync(filePath, 'utf8');
   tokensRead = chatController.chat.countTokens(fileContent);
-  chatController.chat.addFrontendMessage('function', `Read ${await openFileLink(filePath)} file (${tokensRead} tokens)`);
+  chatController.chat.addFrontendMessage(
+    'function',
+    `Read ${await openFileLink(filePath)} file (${tokensRead} tokens)`,
+  );
 
   return fileContent;
 }
@@ -281,9 +244,9 @@ async function searchCode({ query, rerank = false, count = 20 }) {
   return noResultsMessage;
 }
 
-async function googleSearch({ queries }) {
+async function googleSearch({ query }) {
   const searchAPI = new GoogleSearch();
-  const googleSearchResults = await searchAPI.search(queries);
+  const googleSearchResults = await searchAPI.singleSearch(query);
 
   const promises = googleSearchResults.map(async (result) => {
     const content = await fetchAndParseUrl(result.link);
@@ -298,17 +261,23 @@ async function googleSearch({ queries }) {
   let firstCompressedResult;
 
   for (const result of results) {
-    compressedResult = await contextualCompress(queries[0], [result.content], [{ link: result.link }]);
+    compressedResult = await contextualCompress(query, [result.content], [{ link: result.link }]);
     if (!firstCompressedResult) firstCompressedResult = compressedResult;
 
-    if (await checkIfAnswersQuery(queries[0], compressedResult)) {
-      chatController.chat.addFrontendMessage('function', `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`);
+    if (await checkIfAnswersQuery(query, compressedResult)) {
+      chatController.chat.addFrontendMessage(
+        'function',
+        `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`,
+      );
       return JSON.stringify(compressedResult);
     }
   }
 
   // Return first compressed result if no result meets the condition
-  chatController.chat.addFrontendMessage('function', `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`);
+  chatController.chat.addFrontendMessage(
+    'function',
+    `Checked websites:<br>${results.map((result) => `<a href="${result.link}" class="text-truncate ms-2">${result.link}</a>`).join('<br>')}`,
+  );
   return JSON.stringify(firstCompressedResult);
 }
 
@@ -351,7 +320,8 @@ async function fetchAndParseUrl(url) {
   try {
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537',
       },
       timeout: 5000,
     });
@@ -394,6 +364,17 @@ Does this result answer search query question?`;
   return result !== false;
 }
 
+async function unifiedSearch({ type, query }) {
+  switch (type) {
+    case 'codebase':
+      return await searchCode({ query });
+    case 'google':
+      return await googleSearch({ query });
+    default:
+      return 'Invalid search type specified.';
+  }
+}
+
 function respondTargetFileNotProvided() {
   chatController.chat.addFrontendMessage('function', 'File name was not provided.');
 
@@ -417,6 +398,7 @@ module.exports = {
   createFile,
   replaceInFile,
   readFile,
+  getFilePath,
   shell,
   searchCode,
   googleSearch,

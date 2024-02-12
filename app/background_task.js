@@ -1,7 +1,6 @@
-const SYSTEM_PROMPT = 'Respond with JSON in the specified format below: ';
+const { DEFAULT_BACKGROUND_TASK_MODEL, MODELS_WITH_JSON_SUPPORT } = require('./static/models_config');
 
-const DEFAULT_MODEL = 'gpt-3.5-turbo-1106';
-const MODELS_WITH_JSON_SUPPORT = ['gpt-3.5-turbo-1106', 'gpt-4-1106-preview'];
+const SYSTEM_PROMPT = 'Respond with JSON in the specified format below: ';
 
 class BackgroundTask {
   constructor(chatController) {
@@ -10,7 +9,7 @@ class BackgroundTask {
     this.chatController = chatController;
   }
 
-  async run({ prompt, format, temperature = 1.0 }) {
+  async run({ prompt, format, temperature = 1.0, model = DEFAULT_BACKGROUND_TASK_MODEL }) {
     try {
       const messages = this.buildMessages(format, prompt);
       const config = {
@@ -18,7 +17,7 @@ class BackgroundTask {
         temperature: temperature,
       };
 
-      config.model = this.chatController.settings.baseUrl ? this.chatController.selectedModel : DEFAULT_MODEL;
+      config.model = this.chatController.settings.baseUrl ? this.chatController.selectedModel : model;
       if (MODELS_WITH_JSON_SUPPORT.includes(config.model)) {
         config.response_format = { type: 'json_object' };
       }

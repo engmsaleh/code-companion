@@ -7,11 +7,9 @@ const autosize = require('autosize');
 const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
-const { getSystemInfo } = require('./utils');
-const { systemMessage } = require('./static/prompts');
 const { reduceTokensUsage } = require('./static/constants');
 const { trackEvent } = require('@aptabase/electron/renderer');
-const BackgroundTask = require('./tools/background_task');
+const BackgroundTask = require('./background_task');
 const { toolDefinitions, formattedTools } = require('./tools/tools');
 
 const MAX_RETRIES = 3;
@@ -125,7 +123,7 @@ class ChatController {
     this.terminalSession.interruptShellSession();
     stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle text-danger me-2"></i> Stopping...';
     setTimeout(() => {
-      stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle text-danger me-2"></i> Stop';
+      stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle me-2"></i>';
       this.abortController = new AbortController();
       this.stopProcess = false;
     }, 2000);
@@ -256,13 +254,10 @@ class ChatController {
       }
     }
 
-    // add project state context to messages for Code Agent
-    await this.agent.updateProjectState();
-
     try {
       viewController.updateLoadingIndicator(true, 'Waiting for ChatGPT ...');
-      const formattedMessages = this.chat.backendMessages.map((message) => _.omit(message, ['id']));
-      const apiResponse = await this.callAPI(formattedMessages);
+      const apiMessages = await this.chat.chatContextBuilder.buildMessages(query);
+      const apiResponse = await this.callAPI(apiMessages);
 
       if (!apiResponse) {
         console.error('No response from API');
@@ -270,7 +265,10 @@ class ChatController {
       }
 
       if (apiResponse.choices[0].finish_reason === 'length') {
-        this.chat.addFrontendMessage('error', 'Response was incomplete due to model context size limit. <br />Please clear chat or delete some messages and try again.');
+        this.chat.addFrontendMessage(
+          'error',
+          'Response was incomplete due to model context size limit. <br />Please clear chat or delete some messages and try again.',
+        );
         document.getElementById('retry_button').removeAttribute('hidden');
         return;
       }
@@ -312,19 +310,29 @@ class ChatController {
 
   async submitMessage() {
     const messageInput = document.getElementById('messageInput');
-    const query = messageInput.value.replace(/\n$/, '');
-    if (!query) return;
+    const userMessage = messageInput.value.replace(/\n$/, '');
+    if (!userMessage) return;
 
     messageInput.value = '';
     autosize.update(messageInput);
 
     const urlRegex = /https?:\/\/[^\s/$.?#].[^\s]*/gi;
-    const urlMatches = query.match(urlRegex);
+    const urlMatches = userMessage.match(urlRegex);
 
-    if (urlRegex.test(query) && query === urlMatches[0]) {
+    if (urlRegex.test(userMessage) && userMessage === urlMatches[0]) {
       this.processURL(urlMatches[0]);
     } else {
-      this.process(query);
+      await this.processNewUserMessage(userMessage);
+    }
+  }
+
+  async processNewUserMessage(userMessage) {
+    if (this.chat.isEmpty()) {
+      document.getElementById('output').innerHTML = '';
+      this.chat.addTask(userMessage);
+      await this.process();
+    } else {
+      await this.process(userMessage);
     }
   }
 
@@ -345,21 +353,17 @@ class ChatController {
     }
   }
 
-  async buildSystemMessage() {
-    this.chat.replaceSystemMessagePlaceholder('{osName}', getSystemInfo());
-    this.chat.replaceSystemMessagePlaceholder('{shellType}', this.terminalSession.shellType);
-  }
-
   async clearChat() {
     trackEvent(`new_chat`);
     this.chat = new Chat();
-    this.chat.addBackendMessage('system', systemMessage);
     this.agent.userDecision = false;
     this.terminalSession.createShellSession();
     document.getElementById('output').innerHTML = '';
     document.getElementById('retry_button').setAttribute('hidden', true);
     document.getElementById('approval_buttons').setAttribute('hidden', true);
     document.getElementById('messageInput').disabled = false;
+    this.chat.renderTask();
+    document.getElementById('messageInput').setAttribute('placeholder', 'Provide task details...');
     this.stopProcess = false;
     this.conversationTokens = 0;
     this.lastRequestTokens = 0;
@@ -372,7 +376,6 @@ class ChatController {
       requirementsChecklist: '',
     };
 
-    this.buildSystemMessage();
     onboardingController.showAllTips();
     viewController.showWelcomeContent();
     viewController.onShow();

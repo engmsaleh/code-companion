@@ -125,7 +125,7 @@ class ViewController {
               <div class="col-auto pt-${roleSetting.rowPadding}">
                 ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>
-              <div class="col pt-${roleSetting.rowPadding}">
+              <div class="col w-50 pt-${roleSetting.rowPadding}">
                 ${content ? marked.parse(content) : ''}
               </div>
               ${buttons}
@@ -156,7 +156,7 @@ class ViewController {
       messageToShow += `Tokens: Last - ${chatController.lastRequestTokens}, Total - ${chatController.conversationTokens}`;
     }
     if (messageToShow) {
-      document.getElementById('systemMessage').innerText = messageToShow;
+      document.getElementById('footerMessage').innerText = messageToShow;
     }
   }
 

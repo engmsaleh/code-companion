@@ -87,7 +87,6 @@ class TerminalSession {
     });
     ipcRenderer.on('shell-type', (event, data) => {
       this.shellType = data;
-      chatController.chat.replaceSystemMessagePlaceholder('{shellType}', this.shellType);
       this.setPrompt();
     });
     ipcRenderer.on('shell-data', (event, data) => {
