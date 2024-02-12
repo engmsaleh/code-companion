@@ -75,23 +75,25 @@
 
     <footer class="footer mt-auto sticky-bottom bg-body">
       <div>
-        <div class="d-flex border-top align-items-start pt-2">
-          <div class="flex-grow-1 accordion accordion-flush me-2" id="taskAccordion">
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="headingTask">
-                <button class="accordion-button collapsed py-1 text-truncate" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTask" aria-expanded="false" aria-controls="collapseTask">
-                  <span class="fw-bold me-3">Task:</span><span id="taskTitle"><span class="text-secondary">Provide task details below...</span></span> 
-                </button>
-              </h2>
-              <div id="collapseTask" class="accordion-collapse collapse" aria-labelledby="headingTask" data-bs-parent="#taskAccordion">
-                <div class="accordion-body" id="taskContainer"></div>
+        <div id="taskSection" hidden>
+          <div class="d-flex border-top align-items-start pt-2">
+            <div class="flex-grow-1 accordion accordion-flush me-2" id="taskAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTask">
+                  <button class="accordion-button collapsed py-1 text-truncate" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTask" aria-expanded="false" aria-controls="collapseTask">
+                    <span class="fw-bold me-3">Task:</span><span id="taskTitle">Provide task details below...</span> 
+                  </button>
+                </h2>
+                <div id="collapseTask" class="accordion-collapse collapse" aria-labelledby="headingTask" data-bs-parent="#taskAccordion">
+                  <div class="accordion-body" id="taskContainer"></div>
+                </div>
               </div>
             </div>
+            
+            <button class="btn btn-sm btn-primary me-2 text-nowrap" type="button" id="clearChat" onclick="chatController.clearChat()">
+              <i class="bi bi-pencil-square border-0" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="New task (Cmd/Ctrl+N)"></i> New task
+            </button>
           </div>
-          
-          <button class="btn btn-sm btn-primary me-2 text-nowrap" type="button" id="clearChat" onclick="chatController.clearChat()">
-            <i class="bi bi-pencil-square border-0" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="New task (Cmd/Ctrl+N)"></i> New task
-          </button>
         </div>
 
         <div>

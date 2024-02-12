@@ -35,14 +35,15 @@ class Chat {
 
   renderTask() {
     if (!this.task) {
-      document.getElementById('taskTitle').innerHTML =
-        '<span class="text-secondary">Provide task details below...</span>';
+      document.getElementById('taskTitle').innerHTML = 'Provide task details below...';
+      document.getElementById('taskSection').hidden = true;
       return;
     }
 
     const taskTitle =
       this.taskTitle || this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : '');
     document.getElementById('taskTitle').innerText = taskTitle;
+    document.getElementById('taskSection').hidden = false;
     document.getElementById('taskContainer').innerHTML = this.task;
     document.getElementById('messageInput').setAttribute('placeholder', 'Send message...');
   }
