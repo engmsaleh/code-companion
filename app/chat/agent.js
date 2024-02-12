@@ -1,6 +1,5 @@
 const fs = require('graceful-fs');
 const path = require('path');
-const { withErrorHandling } = require('../utils');
 const ProjectController = require('../project_controller');
 const { toolDefinitions, previewMessageMapping } = require('../tools/tools');
 
@@ -25,7 +24,7 @@ class Agent {
       chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, toolCalls);
 
       if (toolCalls) {
-        const userRejected = await this.runTools(toolCalls, apiResponseMessage.content);
+        const userRejected = await this.runTools(toolCalls);
         if (!userRejected) {
           await chatController.process('', false);
         }
@@ -35,12 +34,12 @@ class Agent {
     }
   }
 
-  async runTools(toolCalls, messageContent) {
+  async runTools(toolCalls) {
     let isUserRejected = false;
 
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
-      this.showToolCallPreview(toolCall, messageContent);
+      this.showToolCallPreview(toolCall);
       const decision = await this.waitForDecision(functionName);
 
       if (decision) {
@@ -53,7 +52,13 @@ class Agent {
       } else {
         isUserRejected = true;
         chatController.chat.addFrontendMessage('error', 'Action was rejected');
-        chatController.chat.addBackendMessage('tool', 'User rejected this function call', null, functionName, toolCall.id);
+        chatController.chat.addBackendMessage(
+          'tool',
+          'User rejected this function call',
+          null,
+          functionName,
+          toolCall.id,
+        );
       }
       this.userDecision = null;
     }
@@ -63,7 +68,10 @@ class Agent {
 
   async waitForDecision(functionName) {
     this.userDecision = null;
-    if (chatController.settings.approvalRequired && toolDefinitions.find((tool) => tool.name === functionName).approvalRequired) {
+    if (
+      chatController.settings.approvalRequired &&
+      toolDefinitions.find((tool) => tool.name === functionName).approvalRequired
+    ) {
       document.getElementById('messageInput').disabled = true;
       document.getElementById('approval_buttons').removeAttribute('hidden');
       return new Promise((resolve) => {
@@ -120,70 +128,12 @@ class Agent {
     }
   }
 
-  async getFolderStructure() {
-    let files = [];
-    try {
-      files = await fs.promises.readdir(this.currentWorkingDir);
-    } catch (error) {
-      chatController.chat.addFrontendMessage(
-        'error',
-        `Error occurred while checking directory structure in ${this.currentWorkingDir}.
-         <br>Please change directory where app can read/write files or update permissions for current directory.`,
-      );
-      return;
-    }
-
-    const folderStructure = [];
-    for (const file of files) {
-      const stats = await fs.promises.stat(path.join(this.currentWorkingDir, file));
-      if (stats.isDirectory()) {
-        folderStructure.push(`- ${file}/`);
-      } else {
-        folderStructure.push(`- ${file}`);
-      }
-    }
-
-    if (folderStructure.length > 30) {
-      folderStructure.splice(30);
-      return `${folderStructure.join('\n')}\n... and more`;
-    }
-
-    if (folderStructure.length == 0) {
-      return 'directory is empty';
-    }
-
-    return folderStructure.join('\n');
-  }
-
-  async updateProjectState() {
-    this.projectState.currentWorkingDir = await chatController.terminalSession.getCurrentDirectory();
-    const filesInFolder = await withErrorHandling(this.getFolderStructure.bind(this));
-    this.projectState.folderStructure = filesInFolder;
-
-    const projectStateText = await this.projectStateToText();
-    chatController.chat.deleteMessagesThatStartWith('In case this information is helpfull. You are already located in the ');
-    chatController.chat.addProjectStateMessage(projectStateText);
-  }
-
-  async projectStateToText() {
-    const dirName = path.basename(this.currentWorkingDir);
-    let projectStateText = '';
-    projectStateText += `In case this information is helpfull. You are already located in the '${dirName}' directory (don't navigate to or add '${dirName}' to file path). The full path to this directory is '${this.currentWorkingDir}'.`;
-    if (this.projectState.folderStructure) {
-      projectStateText += `\nThe contents of this top-level directory: \n${this.projectState.folderStructure}`;
-    }
-
-    projectStateText +=
-      '\n\nDo not provide created or updated code and do not include function call name that you will use in the message content, only in the function call arguments. Do not provide instructions how to complete the task to user, instead always call a function yourself. Do not stop until all requirements are completed and everything is fully functional.';
-    projectStateText += this.projectController.getCustomInstructions();
-    return projectStateText;
-  }
-
-  showToolCallPreview(toolCall, messageContent) {
+  showToolCallPreview(toolCall) {
     const functionName = toolCall.function.name;
     const args = this.parseArguments(toolCall.function.arguments);
     const preview = previewMessageMapping(args)[functionName];
-    chatController.chat.addFrontendMessage('assistant', `${messageContent ? messageContent : preview.message}\n${preview.code}`);
+
+    chatController.chat.addFrontendMessage('assistant', `${preview.message}\n${preview.code}`);
   }
 }
 

@@ -19,6 +19,8 @@ class ChatHistory {
         backendMessages: chatController.chat.backendMessages,
         currentId: chatController.chat.currentId,
         lastBackendMessageId: chatController.chat.lastBackendMessageId,
+        taskTitle: chatController.chat.taskTitle,
+        task: chatController.chat.task,
       },
       workingDir: chatController.agent.currentWorkingDir,
       selectedModel: chatController.settings.selectedModel,
@@ -98,7 +100,9 @@ class ChatHistory {
       return;
     }
     saveChatModal.show();
-    document.getElementById('chatTitle').focus();
+    const chatTitleInput = document.getElementById('chatTitle');
+    chatTitleInput.value = chatController.chat.taskTitle || '';
+    chatTitleInput.focus();
   }
 }
 

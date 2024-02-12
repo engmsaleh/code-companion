@@ -17,7 +17,7 @@
 
   <body class="d-flex flex-column h-100">
     <header class="py-2 fixed-top bg-body border-bottom">
-      <div class="d-flex justify-content-center align-items-center">
+      <div class="d-flex justify-content-center align-items-center mb-1">
         <button class="btn shadow-none btn-sm text-decoration-none mx-1" type="button" id="settingsToggle" data-bs-toggle="offcanvas" data-bs-target="#settingsMenu">
           <i class="bi bi-gear bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Settings"></i>
         </button>
@@ -35,7 +35,7 @@
         </button>
         
         <button class="btn shadow-none btn-sm text-decoration-none mx-1" type="button" onclick="chatController.chat.history.showModal();">
-          <i class="bi bi-download bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Save chat (Cmd/Ctrl + S)"></i>
+          <i class="bi bi-save bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Save chat (Cmd/Ctrl + S)"></i>
         </button>
         <button
           class="btn shadow-none text-decoration-none mx-1"
@@ -52,7 +52,7 @@
 
     <main class="flex-shrink-0 pt-5">
       <div>
-        <div id="search_result_container" class="mx-3 mt-3 mb-5 flex-grow-1">
+        <div id="search_result_container" class="mx-3 mt-4 mb-5 flex-grow-1">
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
           <div id="approval_buttons" class="text-center mb-3" hidden>
@@ -75,23 +75,33 @@
 
     <footer class="footer mt-auto sticky-bottom bg-body">
       <div>
-        <div>
-          <div class="d-flex align-items-end mr-3 bottom-0 bg-body py-3">
-            <div>
-              <button class="btn shadow-none btn-sm text-decoration-none" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
-                <i class="bi bi-file-earmark-plus bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload a file"></i>
-              </button>
-              <button class="btn shadow-none btn-sm text-decoration-none me-2" type="button" id="clearChat" onclick="chatController.clearChat()">
-                <i class="bi bi-chat bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="New chat (Cmd/Ctrl+N)"></i>
-              </button>
+        <div class="d-flex border-top align-items-start pt-2">
+          <div class="flex-grow-1 accordion accordion-flush me-2" id="taskAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingTask">
+                <button class="accordion-button collapsed py-1 text-truncate" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTask" aria-expanded="false" aria-controls="collapseTask">
+                  <span class="fw-bold me-3">Task:</span><span id="taskTitle"><span class="text-secondary">Provide task details below...</span></span> 
+                </button>
+              </h2>
+              <div id="collapseTask" class="accordion-collapse collapse" aria-labelledby="headingTask" data-bs-parent="#taskAccordion">
+                <div class="accordion-body" id="taskContainer"></div>
+              </div>
             </div>
+          </div>
+          
+          <button class="btn btn-sm btn-primary me-2 text-nowrap" type="button" id="clearChat" onclick="chatController.clearChat()">
+            <i class="bi bi-pencil-square border-0" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="New task (Cmd/Ctrl+N)"></i> New task
+          </button>
+        </div>
 
+        <div>
+          <div class="d-flex align-items-end ms-1 bottom-0 bg-body p-3">
             <div class="d-flex position-relative flex-grow-1">
               <textarea
                 rows="1"
                 class="form-control form-control-lg bg-body-secondary border-0 shadow-none autosize-textarea flex-grow-1"
                 id="messageInput"
-                placeholder="Send a message"
+                placeholder="Provide task details..."
                 autofocus
                 style="padding-right: 50px"
               ></textarea>
@@ -102,16 +112,21 @@
             </div>
 
             <button
-              class="btn btn-lg border-0 d-flex align-items-center me-2"
+              class="btn btn-lg border-0 d-flex align-items-center"
               type="button"
               id="requestStopProcess"
               data-bs-toggle="tooltip"
               data-bs-title="Interrupt process (Ctrl + C)"
               onclick="chatController.requestStopProcess();"
             >
-              <i class="bi bg-body border-0 bi-stop-circle text-danger me-2"></i>
-              Stop
+              <i class="bi bg-body border-0 bi-stop-circle"></i>
             </button>
+
+            <div>
+              <button class="btn shadow-none btn-sm text-decoration-none" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
+                <i class="bi bi-paperclip bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload a file"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -125,7 +140,7 @@
           <div id="terminal_output" class="collapse show mx-2"></div>
         </div>
         
-        <div id="systemMessage" class="text-secondary text-truncate small m-2 text-end">App is up to date</div>
+        <div id="footerMessage" class="text-secondary text-truncate small m-2 text-end">App is up to date</div>
       </div>
     </footer>
 

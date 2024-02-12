@@ -1,6 +1,7 @@
 const { clipboard } = require('electron');
 const { getEncoding } = require('js-tiktoken');
 const ChatHistory = require('./chat_history');
+const ChatContextBuilder = require('./chat_context_builder');
 const { debounce } = require('lodash');
 
 class Chat {
@@ -10,7 +11,10 @@ class Chat {
     this.currentId = 1;
     this.lastBackendMessageId = 0;
     this.history = new ChatHistory();
+    this.chatContextBuilder = new ChatContextBuilder(this);
     this.tokenizer = getEncoding('cl100k_base');
+    this.task = null;
+    this.shellType = null;
   }
 
   isEmpty() {
@@ -20,6 +24,36 @@ class Chat {
   getNextId() {
     this.currentId += 1;
     return this.currentId;
+  }
+
+  async addTask(task) {
+    this.task = task;
+    this.renderTask();
+    await this.createTaskTitle();
+    this.renderTask();
+  }
+
+  renderTask() {
+    if (!this.task) {
+      document.getElementById('taskTitle').innerHTML =
+        '<span class="text-secondary">Provide task details below...</span>';
+      return;
+    }
+
+    const taskTitle =
+      this.taskTitle || this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : '');
+    document.getElementById('taskTitle').innerText = taskTitle;
+    document.getElementById('taskContainer').innerHTML = this.task;
+    document.getElementById('messageInput').setAttribute('placeholder', 'Send message...');
+  }
+
+  async createTaskTitle() {
+    const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
+    const taskTitle = await chatController.backgroundTask.run({ prompt, format: 'text' });
+
+    if (taskTitle) {
+      this.taskTitle = taskTitle;
+    }
   }
 
   getLastUserMessage() {
@@ -66,7 +100,10 @@ class Chat {
       content,
     };
     // insert this message right before last assistant or user message
-    const insertIndex = this.findLastIndex(this.backendMessages, (msg) => msg.role === 'assistant' || msg.role === 'user');
+    const insertIndex = this.findLastIndex(
+      this.backendMessages,
+      (msg) => msg.role === 'assistant' || msg.role === 'user',
+    );
     this.backendMessages.splice(insertIndex, 0, message);
   }
 
@@ -91,7 +128,9 @@ class Chat {
   }
 
   deleteMessagesThatStartWith(pattern) {
-    this.backendMessages = this.backendMessages.filter((msg) => !(typeof msg.content === 'string' && msg.content && msg.content.startsWith(pattern)));
+    this.backendMessages = this.backendMessages.filter(
+      (msg) => !(typeof msg.content === 'string' && msg.content && msg.content.startsWith(pattern)),
+    );
   }
 
   deleteMessagesAfterId(frontendMessageId) {
@@ -107,13 +146,6 @@ class Chat {
     }
   }
 
-  replaceSystemMessagePlaceholder(placeholder, value) {
-    if (value) {
-      const regex = new RegExp(placeholder, 'g');
-      this.backendMessages[0].content = this.backendMessages[0].content.replace(regex, value);
-    }
-  }
-
   updateUI() {
     viewController.updateLoadingIndicator(false);
     document.getElementById('streaming_output').innerHTML = '';
@@ -121,6 +153,7 @@ class Chat {
     document.getElementById('output').innerHTML = formattedMessages;
     viewController.scrollToBottom();
     viewController.addCopyCodeButtons();
+    this.renderTask();
   }
 
   updateStreamingMessage(message) {
