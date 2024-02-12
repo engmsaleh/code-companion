@@ -2,6 +2,7 @@ const fileType = require('file-type').fromBuffer;
 const readChunkSync = require('read-chunk').sync;
 const reader = require('any-text');
 const { isTextFile } = require('../utils');
+const ImageHandler = require('./image_handler');
 
 async function readFile(filepath) {
   try {
@@ -15,7 +16,14 @@ async function readFile(filepath) {
     if (isTextFile(buffer)) {
       return await readTextFile(filepath);
     }
-    chatController.chat.addFrontendMessage('error', `Binary files are not supported (${basename})<br>ChatGPT can only understand text based files like .txt, .docx, .csv, .json, .js, .py etc.`);
+
+    if (type && ['png', 'jpg', 'jpeg', 'gif'].includes(type.ext)) {
+      const imageHandler = new ImageHandler();
+      const imageDescription = await imageHandler.imageToText(filepath);
+      return imageDescription;
+    }
+
+    chatController.chat.addFrontendMessage('error', `File type is not supported: (${basename})`);
   } catch (err) {
     chatController.chat.addFrontendMessage('error', `An error occurred reading the file: ${err.message}`);
     console.error(err);
@@ -55,7 +63,7 @@ async function handleDrop(event) {
   const { files } = event.dataTransfer;
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    processFile(file.path);
+    await processFile(file.path);
   }
   viewController.updateLoadingIndicator(false);
 }
