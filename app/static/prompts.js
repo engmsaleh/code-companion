@@ -32,8 +32,12 @@ const FINISH_TASK_PROMPT_TEMPLATE = `When finished with all steps for the task, 
 - Then fix all issues and bugs.
 Once all issues are fixed from above, launch the task with the default application.`;
 
+const VISION_MODEL_PROMPT = `Describe the image in all possible details.
+Include colors, shapes, position, and any text for each element, and all relationships between elements.`;
+
 module.exports = {
   PLAN_PROMPT_TEMPLATE,
   TASK_EXECUTION_PROMPT_TEMPLATE,
   FINISH_TASK_PROMPT_TEMPLATE,
+  VISION_MODEL_PROMPT,
 };
