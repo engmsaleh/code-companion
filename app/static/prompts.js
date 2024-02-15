@@ -22,7 +22,9 @@ Any new required task dependencies should be installed locally.
 
 When an error occurs: first provide an explanation of why the error occurred, then the best way on how to fix it. After that, list all potential files where code needs to be fixed and fix all errors.
 Use correct command specifically for the {osName} and {shellType} terminal in 'run_shell_command' function call.
-Don't output code in the "content" field. Use the "tool_calls" field to output code.`;
+Don't output code in the "content" field. Use the "tool_calls" field to output code.
+
+Do not provide instructions how to complete the task to a user, instead always call tools yourself.`;
 
 const FINISH_TASK_PROMPT_TEMPLATE = `When finished with all steps for the task, look at the code and:
 - First, list all requirements and indicate if they were implemented or not.

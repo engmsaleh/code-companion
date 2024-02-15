@@ -36,8 +36,8 @@ class CodeEmbeddings {
       new OpenAIEmbeddings({
         openAIApiKey,
         modelName: EMBEDDINGS_MODEL_NAME,
-        maxRetries: 3,
-        timeout: 60 * 1000,
+        maxRetries: 5,
+        timeout: 5 * 60 * 1000,
       }),
     );
   }
@@ -118,7 +118,9 @@ class CodeEmbeddings {
 
   deleteEmbeddingsForFilesNotInList(filesList) {
     const filePathsToKeep = new Set(filesList);
-    this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter((record) => filePathsToKeep.has(record.metadata.filePath));
+    this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter((record) =>
+      filePathsToKeep.has(record.metadata.filePath),
+    );
   }
 
   findRecords(filePath) {
@@ -126,7 +128,9 @@ class CodeEmbeddings {
   }
 
   deleteRecords(filePath) {
-    this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter((record) => record.metadata.filePath !== filePath);
+    this.vectorStore.memoryVectors = this.vectorStore.memoryVectors.filter(
+      (record) => record.metadata.filePath !== filePath,
+    );
   }
 
   async search({ query, limit = 50, basePath, minScore = 0.4, rerank = true }) {
@@ -174,7 +178,9 @@ Respond with JSON array only with actual array indexes in the order of relevance
       const format = [3, 1, 4];
 
       const parsedRankings = await chatController.backgroundTask.run({ prompt, format });
-      const rankedResults = parsedRankings.filter((index) => index in searchResults).map((index) => searchResults[index]);
+      const rankedResults = parsedRankings
+        .filter((index) => index in searchResults)
+        .map((index) => searchResults[index]);
       return rankedResults;
     } catch (error) {
       return searchResults;
