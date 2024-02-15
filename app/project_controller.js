@@ -259,7 +259,12 @@ class ProjectController {
   async getFilesHash() {
     this.updateListOfFiles();
     const hashes = await Promise.all(this.filesList.map((filePath) => this.getFileHash(filePath)));
-    return CryptoJS.SHA256(hashes.join('')).toString();
+
+    return (
+      CryptoJS.SHA256(hashes.join('')).toString() +
+      EMBEDDINGS_VERSION +
+      chatController.settings.maxFilesToEmbed.toString()
+    );
   }
 }
 

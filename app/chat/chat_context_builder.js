@@ -7,7 +7,7 @@ const { withErrorHandling, getSystemInfo } = require('../utils');
 const { getFilePath } = require('../tools/tools');
 
 const MAX_SUMMARY_TOKENS = 2000;
-const PRESERVE_LAST_N_MESSAGES = 10;
+const PRESERVE_LAST_N_MESSAGES = 5;
 
 class ChatContextBuilder {
   constructor(chat) {
