@@ -166,7 +166,6 @@ class Chat {
   updateStreamingMessage(message) {
     const formattedMessage = viewController.formatResponse({ role: 'assistant', content: message });
     document.getElementById('streaming_output').innerHTML = formattedMessage;
-    viewController.scrollToBottom();
   }
 
   countTokens(content) {
