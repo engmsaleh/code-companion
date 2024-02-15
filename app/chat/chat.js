@@ -49,8 +49,14 @@ class Chat {
   }
 
   async createTaskTitle() {
-    const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
-    const taskTitle = await chatController.backgroundTask.run({ prompt, format: 'text' });
+    let taskTitle = '';
+
+    try {
+      const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
+      taskTitle = await chatController.backgroundTask.run({ prompt, format: 'text' });
+    } catch (error) {
+      taskTitle = this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : ''); // Fallback task title
+    }
 
     if (taskTitle) {
       this.taskTitle = taskTitle;
