@@ -56,14 +56,10 @@ class ViewController {
 
   scrollToBottom() {
     const container = document.getElementById('search_result_container');
-    const lastMessage = container.lastElementChild;
 
-    if (lastMessage) {
-      const rect = lastMessage.getBoundingClientRect();
-      const bodyRect = document.body.getBoundingClientRect();
-      const scrollPos = rect.bottom - bodyRect.top + 150; // offset from top of the body
+    if (container) {
       window.scrollTo({
-        top: scrollPos,
+        top: container.scrollHeight,
         behavior: 'smooth',
       });
     }
