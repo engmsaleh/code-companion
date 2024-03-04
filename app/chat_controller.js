@@ -118,6 +118,7 @@ class ChatController {
 
   requestStopProcess() {
     this.stopProcess = true;
+    this.isProcessing = false;
     this.abortController.abort();
     const stopButton = document.getElementById('requestStopProcess');
     this.terminalSession.interruptShellSession();
@@ -226,6 +227,7 @@ class ChatController {
 
   async process(query, renderUserMessage = true) {
     if (this.isProcessing) {
+      console.error('Already processing');
       return;
     }
     this.isProcessing = true;

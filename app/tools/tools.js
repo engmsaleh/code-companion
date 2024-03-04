@@ -19,7 +19,7 @@ const toolDefinitions = [
         },
         createText: {
           type: 'string',
-          description: `Output the entire completed source code for a file in a single step. The code should be fully functional, with no placeholders. Always use correct indentation and new lines.`,
+          description: `Output the entire completed source code for a file in a single step. Always use correct indentation and new lines.`,
         },
       },
     },
@@ -39,7 +39,7 @@ const toolDefinitions = [
         findString: {
           type: 'string',
           description:
-            'Use large unique string or entire code block that exists in the last content of the file and need to be replaced. Do not use regex. Must include all leading spaces.',
+            'String or entire code block that exists exactly in the content of the file and need to be replaced. Do not use regex. Must include all leading spaces and match exaclty.',
         },
         replaceWith: {
           type: 'string',
@@ -171,7 +171,7 @@ async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }
   }
 
   if (replaceAll) {
-    const find = new RegExp(findString, 'g');
+    const find = new RegExp(escapeRegExp(findString), 'g');
     content = content.replace(find, replaceWith);
   } else {
     content = content.replace(findString, replaceWith);
@@ -182,6 +182,10 @@ async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }
   chatController.chat.addFrontendMessage('function', successMessage);
 
   return `File ${filePath} updated successfully.`;
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function readFile({ targetFile }) {
@@ -216,7 +220,7 @@ async function shell({ command }) {
     commandResult = `(some command output ommitted)...\n${commandResult}`;
   }
   commandResult = commandResult.replace(command, '');
-  commandResult = `Command that was executed in terminal: '${command}'\nTerminal command output was:\n'${commandResult}'`;
+  commandResult = `Command executed: '${command}'\nOutput:\n'${commandResult ? commandResult : 'Done.'}'`;
   viewController.updateLoadingIndicator(false);
 
   return commandResult;
@@ -228,7 +232,6 @@ async function searchCode({ query, rerank = false, count = 20 }) {
   let uniqueFiles = [];
 
   let results = await chatController.agent.projectController.searchEmbeddings({ query, count, rerank });
-  console.log(results);
 
   if (results && results.length > 0) {
     const files = results.map((result) => result.filePath);
@@ -264,6 +267,7 @@ async function googleSearch({ query }) {
     compressedResult = await contextualCompress(query, [result.content], [{ link: result.link }]);
     if (!firstCompressedResult) firstCompressedResult = compressedResult;
 
+    // return first result if it meets the condition
     if (await checkIfAnswersQuery(query, compressedResult)) {
       chatController.chat.addFrontendMessage(
         'function',
@@ -351,15 +355,20 @@ async function searchURL({ query, url }) {
 }
 
 async function checkIfAnswersQuery(query, searchResult) {
-  const format = true;
+  const format = false;
   const prompt = `
 I am searching web for this query: '${query}'
 Search result is:
 
 ${JSON.stringify(searchResult)}
 
-Does this result answer search query question?`;
-  const result = await chatController.backgroundTask.run({ prompt, format });
+Does this result answer search query question?
+Respond with boolean value:  "true" or "false"`;
+  const result = await chatController.backgroundTask.run({
+    prompt,
+    format,
+    // model: chatController.settings.selectedModel,
+  });
 
   return result !== false;
 }
@@ -367,9 +376,11 @@ Does this result answer search query question?`;
 async function unifiedSearch({ type, query }) {
   switch (type) {
     case 'codebase':
-      return await searchCode({ query });
+      const codebaseResult = await searchCode({ query });
+      return `Codebase search result:\n\n${codebaseResult}`;
     case 'google':
-      return await googleSearch({ query });
+      const result = await googleSearch({ query });
+      return `Google search result:\n\n${result}`;
     default:
       return 'Invalid search type specified.';
   }

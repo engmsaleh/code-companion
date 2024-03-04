@@ -7,7 +7,6 @@ const { withErrorHandling, getSystemInfo } = require('../utils');
 const { getFilePath } = require('../tools/tools');
 
 const MAX_SUMMARY_TOKENS = 2000;
-const PRESERVE_LAST_N_MESSAGES = 5;
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -21,11 +20,9 @@ class ChatContextBuilder {
 
     return [
       await this.addSystemMessage(),
-      this.addProjectCustomInstructionsMessage(),
       this.addTaskMessage(),
-      await this.addProjectContextMessage(),
-      await this.addRelevantSourceCodeMessage(),
       await this.addSummaryOfMessages(),
+      await this.addRelevantSourceCodeMessage(),
       this.addLastUserMessage(userMessage),
     ].filter((message) => message !== null);
   }
@@ -39,10 +36,11 @@ class ChatContextBuilder {
       systemMessage = TASK_EXECUTION_PROMPT_TEMPLATE;
     }
 
-    if (this.chat.backendMessages.length > 10) {
+    if (this.chat.backendMessages.length > 7) {
       systemMessage += `\n\n${FINISH_TASK_PROMPT_TEMPLATE}`;
     }
 
+    systemMessage += this.addProjectCustomInstructionsMessage();
     systemMessage = this.fromTemplate(systemMessage, '{osName}', getSystemInfo());
     systemMessage = this.fromTemplate(systemMessage, '{shellType}', chatController.terminalSession.shellType);
 
@@ -56,12 +54,13 @@ class ChatContextBuilder {
     const prompt = `
     Task:
     "${this.chat.task}"\n
-    Is this a complex task that a typical software engineer need to create an architecture plan in order to complete it?
+    Is this user task will need to be brainstormed and planned before execution? Respond false, if this is a simple task that involves only a few commands or one file manipulation.
     Respond with boolean value:  "true" or "false"`;
 
     const result = await chatController.backgroundTask.run({
       prompt,
       format: false,
+      model: chatController.settings.selectedModel,
     });
 
     return result;
@@ -77,44 +76,25 @@ class ChatContextBuilder {
   addProjectCustomInstructionsMessage() {
     const projectCustomInstructions = chatController.agent.projectController.getCustomInstructions();
     if (!projectCustomInstructions) {
-      return null;
+      return '';
+    } else {
+      return `\n\n${projectCustomInstructions}`;
     }
-
-    return {
-      role: 'system',
-      content: projectCustomInstructions,
-    };
-  }
-
-  async addProjectContextMessage() {
-    const projectContext = await this.projectStateToText();
-    if (!projectContext) {
-      return null;
-    }
-
-    return {
-      role: 'user',
-      content: projectContext,
-    };
   }
 
   async addSummaryOfMessages() {
     let allMessages = '';
-
-    // Separate the last 5 messages
     const nonEmptyMessages = this.chat.backendMessages.filter((message) => message.content);
-    const recentMessages = nonEmptyMessages.slice(-PRESERVE_LAST_N_MESSAGES);
-    const olderMessages = nonEmptyMessages.slice(0, -PRESERVE_LAST_N_MESSAGES);
-
-    const notSummarizedMessages = olderMessages
+    const messagesToSummarize = nonEmptyMessages.slice(0, -1);
+    const notSummarizedMessages = messagesToSummarize
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {
         if (message.content) {
           let content = message.content;
-          if (message.role == 'tool' && message.name == 'read_file' && message.content.length > 100) {
+          if (message.role == 'tool' && message.name == 'read_file') {
             content = `File read successfully.`;
           }
-          acc += `\n${message.role}${message.role == 'tool' ? ' ' + message.name : ''}:\n${content}\n`;
+          acc += `\n${message.role == 'tool' ? '"assistant" ran a tool' : message.role}:\n${content}\n`;
         }
         return acc;
       }, '')
@@ -124,31 +104,27 @@ class ChatContextBuilder {
 
     if (this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessages);
-      // Update the last summarized message ID to the last of the older messages
+      // Update last summarized message ID to the second last message if messages were summarized
       this.lastSummarizedMessageID =
-        olderMessages.length > 0 ? olderMessages[olderMessages.length - 1].id : this.lastSummarizedMessageID;
+        messagesToSummarize.length > 0
+          ? messagesToSummarize[messagesToSummarize.length - 1].id
+          : this.lastSummarizedMessageID;
       allMessages = this.pastSummarizedMessages;
     }
 
-    // Append the last 5 messages without summarizing them
-    const recentMessagesContent = recentMessages
-      .reduce((acc, message) => {
-        if (message.content) {
-          let content = message.content;
-          if (message.role == 'tool' && message.name == 'read_file' && message.content.length > 100) {
-            content = `File read successfully.`;
-          }
-          acc += `\n${message.role}${message.role == 'tool' ? ' ' + message.name : ''}:\n${content}\n`;
-        }
-        return acc;
-      }, '')
-      .trim();
-
-    allMessages += recentMessagesContent;
+    const lastMessage = nonEmptyMessages[nonEmptyMessages.length - 1];
+    if (lastMessage && lastMessage.id > this.lastSummarizedMessageID) {
+      let lastMessageContent = lastMessage.content;
+      if (lastMessage.role == 'tool' && lastMessage.name == 'read_file') {
+        lastMessageContent = `File read successfully.`;
+      }
+      allMessages +=
+        `\n${lastMessage.role == 'tool' ? '"assistant" ran a tool' : lastMessage.role}:\n${lastMessageContent}\n`.trim();
+    }
 
     return allMessages
       ? {
-          role: 'assistant',
+          role: 'system',
           content: `Summary of conversation and what was done:\n\n ${allMessages}`,
         }
       : null;
@@ -162,7 +138,10 @@ class ChatContextBuilder {
     ${this.chat.task}
     Messages:
     ${messages}\n
-    Compress the messages above. Preserve the meaning, file names, results, order of actions, what was done and what is left. Do not alter user messages.`;
+    Compress the messages above. Preserve the meaning, file names, results, order of actions, what was done and what is left.
+    Also preserve any important information or code snippets.
+    Leave user's messages and plan as is word for word. 
+    `;
     const summary = await chatController.backgroundTask.run({
       prompt,
       format: 'text',
@@ -195,9 +174,14 @@ class ChatContextBuilder {
     const fileReadPromises = existingFiles.map((file) => this.readFile(file));
     const fileContents = await Promise.all(fileReadPromises);
 
+    const projetState = await this.projectStateToText();
+    const fileContentsWithNames = existingFiles
+      .map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`)
+      .join('\n\n');
+
     return {
       role: 'system',
-      content: `Current file's content:\n\n${existingFiles.map((file, index) => `File content for "${file}":\n\n${fileContents[index]}`).join('\n\n')}`,
+      content: `${projetState}\n\nCurrent file's content:\n${fileContentsWithNames}`,
     };
   }
 
