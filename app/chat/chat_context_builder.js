@@ -273,7 +273,10 @@ class ChatContextBuilder {
 
     try {
       const allFiles = await listFiles(rootDir);
-      if (allFiles.length <= 30) {
+      if (allFiles.length === 0) {
+        // If directory is empty
+        return 'The directory is empty.';
+      } else if (allFiles.length <= 30) {
         // If 30 or fewer files, list them all
         return allFiles.map((file) => `- ${file}`).join('\n');
       } else {
