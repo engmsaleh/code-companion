@@ -1,3 +1,5 @@
+const ignore = require('ignore');
+
 const {
   PLAN_PROMPT_TEMPLATE,
   TASK_EXECUTION_PROMPT_TEMPLATE,
@@ -5,6 +7,7 @@ const {
 } = require('../static/prompts');
 const { withErrorHandling, getSystemInfo } = require('../utils');
 const { getFilePath } = require('../tools/tools');
+const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 2000;
 
@@ -157,32 +160,36 @@ class ChatContextBuilder {
   }
 
   async addRelevantSourceCodeMessage() {
-    const touchedFiles = this.getListOfTouchedFiles();
-    console.log('touchedFiles:', touchedFiles);
+    const projetState = await this.projectStateToText();
+    const relevantFilesContents = await this.getRelevantFilesContents();
 
-    if (touchedFiles.length === 0) {
-      return null;
+    return {
+      role: 'system',
+      content: `${projetState}${relevantFilesContents}`,
+    };
+  }
+
+  async getRelevantFilesContents() {
+    const touchedFiles = this.getListOfTouchedFiles();
+    if (touchedFiles.length > 0) {
+      return '';
     }
 
     const normalizedFilePaths = await Promise.all(touchedFiles.map((file) => getFilePath(file)));
     const existingFiles = normalizedFilePaths.filter((file) => fs.existsSync(file));
 
     if (existingFiles.length === 0) {
-      return null;
+      return '';
     }
 
     const fileReadPromises = existingFiles.map((file) => this.readFile(file));
     const fileContents = await Promise.all(fileReadPromises);
 
-    const projetState = await this.projectStateToText();
     const fileContentsWithNames = existingFiles
       .map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`)
       .join('\n\n');
 
-    return {
-      role: 'system',
-      content: `${projetState}\n\nCurrent file's content:\n${fileContentsWithNames}`,
-    };
+    return fileContentsWithNames ? `\n\nCurrent file's content:\n${fileContentsWithNames}` : '';
   }
 
   async readFile(filePath) {
@@ -237,45 +244,55 @@ class ChatContextBuilder {
     let projectStateText = '';
     projectStateText += `In case this information is helpfull. You are already located in the '${dirName}' directory (don't navigate to or add '${dirName}' to file path). The full path to this directory is '${chatController.agent.currentWorkingDir}'.`;
     if (filesInFolder) {
-      projectStateText += `\nThe contents of this top-level directory: \n${filesInFolder}`;
+      projectStateText += `\nThe contents of this project directory (excluding files from gitignore): \n${filesInFolder}`;
     }
 
     return projectStateText;
   }
 
   async getFolderStructure() {
-    let files = [];
+    const ig = ignore().add(ignorePatterns);
+    const rootDir = chatController.agent.currentWorkingDir;
+
+    // Recursive function to list files
+    const listFiles = async (dir, allFiles = [], currentPath = '') => {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      for (let entry of entries) {
+        const entryPath = path.join(dir, entry.name);
+        const relativePath = path.join(currentPath, entry.name);
+        if (ig.ignores(relativePath)) continue; // Skip ignored files/dirs
+
+        if (entry.isDirectory()) {
+          await listFiles(entryPath, allFiles, relativePath);
+        } else {
+          allFiles.push(relativePath);
+        }
+      }
+      return allFiles;
+    };
+
     try {
-      files = await fs.promises.readdir(chatController.agent.currentWorkingDir);
+      const allFiles = await listFiles(rootDir);
+      if (allFiles.length <= 30) {
+        // If 30 or fewer files, list them all
+        return allFiles.map((file) => `- ${file}`).join('\n');
+      } else {
+        // If more than 30 files, only show top-level directories and files
+        const topLevelEntries = await fs.promises.readdir(rootDir, { withFileTypes: true });
+        const filteredTopLevelEntries = topLevelEntries.filter((entry) => !ig.ignores(entry.name));
+        const folderStructure = filteredTopLevelEntries
+          .map((entry) => `- ${entry.name}${entry.isDirectory() ? '/' : ''}`)
+          .join('\n');
+        return folderStructure;
+      }
     } catch (error) {
       chatController.chat.addFrontendMessage(
         'error',
-        `Error occurred while checking directory structure in ${chatController.agent.currentWorkingDir}.
-         <br>Please change directory where app can read/write files or update permissions for current directory.`,
+        `Error occurred while checking directory structure in ${rootDir}.
+       <br>Please change directory where app can read/write files or update permissions for current directory.`,
       );
       return;
     }
-
-    const folderStructure = [];
-    for (const file of files) {
-      const stats = await fs.promises.stat(path.join(chatController.agent.currentWorkingDir, file));
-      if (stats.isDirectory()) {
-        folderStructure.push(`- ${file}/`);
-      } else {
-        folderStructure.push(`- ${file}`);
-      }
-    }
-
-    if (folderStructure.length > 30) {
-      folderStructure.splice(30);
-      return `${folderStructure.join('\n')}\n... and more`;
-    }
-
-    if (folderStructure.length == 0) {
-      return 'directory is empty';
-    }
-
-    return folderStructure.join('\n');
   }
 }
 
