@@ -60,7 +60,7 @@ const toolDefinitions = [
   },
   {
     name: 'read_file',
-    description: 'Read file contents',
+    description: 'Read file',
     parameters: {
       type: 'object',
       properties: {
