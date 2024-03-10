@@ -111,6 +111,7 @@ class ProjectController {
 
   getCustomInstructions() {
     if (!this.currentProject) return;
+
     const instructions = localStorage.get(`project.${this.currentProject.name}.instructions`, '');
     return instructions ? '\n\n' + instructions : '';
   }
