@@ -238,13 +238,16 @@ class ChatContextBuilder {
   }
 
   async projectStateToText() {
-    const filesInFolder = await withErrorHandling(this.getFolderStructure.bind(this));
     const dirName = path.basename(await chatController.terminalSession.getCurrentDirectory());
 
     let projectStateText = '';
     projectStateText += `In case this information is helpfull. You are already located in the '${dirName}' directory (don't navigate to or add '${dirName}' to file path). The full path to this directory is '${chatController.agent.currentWorkingDir}'.`;
-    if (filesInFolder) {
-      projectStateText += `\nThe contents of this project directory (excluding files from gitignore): \n${filesInFolder}`;
+
+    if (chatController.agent.projectController.currentProject) {
+      const filesInFolder = await withErrorHandling(this.getFolderStructure.bind(this));
+      if (filesInFolder) {
+        projectStateText += `\nThe contents of this project directory (excluding files from gitignore): \n${filesInFolder}`;
+      }
     }
 
     return projectStateText;
