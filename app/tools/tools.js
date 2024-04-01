@@ -226,7 +226,7 @@ async function shell({ command }) {
   return commandResult;
 }
 
-async function searchCode({ query, rerank = false, count = 20 }) {
+async function searchCode({ query, rerank = true, count = 10 }) {
   let frontendMessage = '';
   let backendMessage = '';
   let uniqueFiles = [];

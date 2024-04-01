@@ -15,6 +15,7 @@ class Chat {
     this.tokenizer = getEncoding('cl100k_base');
     this.task = null;
     this.shellType = null;
+    this.startTimestamp = Date.now();
   }
 
   isEmpty() {

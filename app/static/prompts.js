@@ -36,6 +36,8 @@ First provide an explanation of why the error occurred, then the best way on how
 Use correct command specifically for the {osName} and {shellType} terminal in 'run_shell_command' function call.
 Don't show user code before updating a file, use the "tool_calls". Do not tell user what tool will be used.
 
+Entire conversation is summarized. Use "summary of conversaion" to see what you (assistant) alreadt did in the previous steps and don't repeat yourself.
+
 Never provide instructions to user how to do something, instead always call tools yourself to get it done.`;
 
 const FINISH_TASK_PROMPT_TEMPLATE = `When finished with all steps for the task, look at the code and:
