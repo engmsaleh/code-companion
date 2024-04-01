@@ -154,7 +154,7 @@ class CodeEmbeddings {
       return formattedResults.slice(0, limit);
     }
 
-    const rerankedResults = await this.rerankSearchResults(query, formattedResults, limit);
+    const rerankedResults = await this.rerankSearchResults(query, formattedResults);
     if (rerankedResults && rerankedResults.length > 0) {
       return rerankedResults.slice(0, limit);
     }
@@ -162,19 +162,19 @@ class CodeEmbeddings {
     return formattedResults.slice(0, limit);
   }
 
-  async rerankSearchResults(query, searchResults, limit) {
+  async rerankSearchResults(query, searchResults) {
     try {
       const searchResultsWithIndex = searchResults.map((result, index) => {
         return { index: index, filePath: result.filePath, fileContent: result.fileContent };
       });
 
-      const prompt = `I am making some code changes and I am searching project codebase for relevant code for this functionality, here is the search query: ${query}\n
-Search engine search results are:
+      const prompt = `Codebase search query: \n${query}\n
+All search results:
 
 ${JSON.stringify(searchResultsWithIndex)}
 
-What array indexes of these search result objects in JSON array above are the most relevant code snippets to my search query?
-Respond with JSON array only with actual array indexes in the order of relevance.`;
+What array indexes of these search result objects in JSON array above are the most relevant to my search query?
+Respond with JSON array only with actual array indexes in the order of search result relevance. Do not include indexes of tottally irrelevant search results.`;
       const format = [3, 1, 4];
 
       const parsedRankings = await chatController.backgroundTask.run({ prompt, format });

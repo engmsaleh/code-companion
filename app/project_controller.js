@@ -267,6 +267,29 @@ class ProjectController {
       chatController.settings.maxFilesToEmbed.toString()
     );
   }
+
+  getRecentModifiedFiles() {
+    if (!this.currentProject) {
+      return [];
+    }
+
+    let sinceDateTime = chatController.chat.startTimestamp;
+    const oneHourAgo = new Date(new Date().getTime() - 60 * 60 * 1000);
+    sinceDateTime = new Date(Math.max(new Date(sinceDateTime).getTime(), oneHourAgo.getTime()));
+
+    this.updateListOfFiles();
+    const recentFiles = this.filesList
+      .map((filePath) => ({
+        path: filePath,
+        mtime: fs.statSync(filePath).mtime,
+      }))
+      .filter((file) => file.mtime > sinceDateTime)
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, 10)
+      .map((file) => file.path);
+
+    return recentFiles;
+  }
 }
 
 module.exports = ProjectController;

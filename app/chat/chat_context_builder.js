@@ -170,26 +170,21 @@ class ChatContextBuilder {
   }
 
   async getRelevantFilesContents() {
-    const touchedFiles = this.getListOfTouchedFiles();
-    if (touchedFiles.length > 0) {
+    const touchedFiles = await this.getListOfTouchedFiles();
+    if (touchedFiles.length === 0) {
       return '';
     }
 
-    const normalizedFilePaths = await Promise.all(touchedFiles.map((file) => getFilePath(file)));
-    const existingFiles = normalizedFilePaths.filter((file) => fs.existsSync(file));
-
-    if (existingFiles.length === 0) {
-      return '';
-    }
-
-    const fileReadPromises = existingFiles.map((file) => this.readFile(file));
+    const fileReadPromises = touchedFiles.map((file) => this.readFile(file));
     const fileContents = await Promise.all(fileReadPromises);
 
-    const fileContentsWithNames = existingFiles
+    const fileContentsWithNames = touchedFiles
       .map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`)
       .join('\n\n');
 
-    return fileContentsWithNames ? `\n\nCurrent file's content:\n${fileContentsWithNames}` : '';
+    return fileContentsWithNames
+      ? `\n\nExisting files (recently modified by assistant or user):\n\n${fileContentsWithNames}`
+      : '';
   }
 
   async readFile(filePath) {
@@ -202,8 +197,8 @@ class ChatContextBuilder {
     }
   }
 
-  getListOfTouchedFiles() {
-    const files = this.backendMessages
+  async getListOfTouchedFiles() {
+    const chatFiles = this.backendMessages
       .filter((message) => message.role === 'assistant' && message.tool_calls)
       .flatMap((message) =>
         message.tool_calls
@@ -218,7 +213,13 @@ class ChatContextBuilder {
           .filter((file) => file !== undefined),
       );
 
-    return [...new Set(files)];
+    const normalizedFilePaths = await Promise.all(chatFiles.map((file) => getFilePath(file)));
+    const existingFiles = normalizedFilePaths.filter((file) => fs.existsSync(file)).reverse();
+
+    const editedFiles = chatController.agent.projectController.getRecentModifiedFiles();
+    const combinedFiles = [...new Set([...editedFiles, ...existingFiles])].slice(0, 10);
+
+    return combinedFiles;
   }
 
   addLastUserMessage(userMessage) {
