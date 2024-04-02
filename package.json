@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.22.10",
+  "version": "5.22.12",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -68,6 +68,7 @@
   },
   "dependencies": {
     "@aptabase/electron": "^0.3.1",
+    "@electron/notarize": "^2.3.0",
     "@langchain/openai": "^0.0.12",
     "@mozilla/readability": "^0.5.0",
     "@postlight/parser": "^2.2.3",

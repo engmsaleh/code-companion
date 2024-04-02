@@ -199,14 +199,10 @@ async function readFile({ targetFile }) {
     chatController.chat.addFrontendMessage('function', doesntExistMessage);
     return doesntExistMessage;
   }
-  const fileContent = fs.readFileSync(filePath, 'utf8');
-  tokensRead = chatController.chat.countTokens(fileContent);
-  chatController.chat.addFrontendMessage(
-    'function',
-    `Read ${await openFileLink(filePath)} file (${tokensRead} tokens)`,
-  );
 
-  return fileContent;
+  chatController.chat.addFrontendMessage('function', `Read ${await openFileLink(filePath)} file`);
+
+  return `File "${filePath}" was read.`;
 }
 
 async function shell({ command }) {
@@ -377,10 +373,10 @@ async function unifiedSearch({ type, query }) {
   switch (type) {
     case 'codebase':
       const codebaseResult = await searchCode({ query });
-      return `Codebase search result:\n\n${codebaseResult}`;
+      return `Codebase search result for "${query}":\n${codebaseResult}`;
     case 'google':
       const result = await googleSearch({ query });
-      return `Google search result:\n\n${result}`;
+      return `Google search result for "${query}":\n${result}`;
     default:
       return 'Invalid search type specified.';
   }
@@ -406,12 +402,5 @@ module.exports = {
   toolDefinitions,
   formattedTools,
   previewMessageMapping,
-  createFile,
-  replaceInFile,
-  readFile,
   getFilePath,
-  shell,
-  searchCode,
-  googleSearch,
-  searchURL,
 };

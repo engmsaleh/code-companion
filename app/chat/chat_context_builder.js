@@ -9,7 +9,7 @@ const { withErrorHandling, getSystemInfo } = require('../utils');
 const { getFilePath } = require('../tools/tools');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 2000;
+const MAX_SUMMARY_TOKENS = 4000;
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -94,16 +94,13 @@ class ChatContextBuilder {
       .reduce((acc, message) => {
         if (message.content) {
           let content = message.content;
-          if (message.role == 'tool' && message.name == 'read_file') {
-            content = `File read successfully.`;
-          }
-          acc += `\n${message.role == 'tool' ? '"assistant" ran a tool' : message.role}:\n${content}\n`;
+          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said:`}:\n${content}\n`;
         }
         return acc;
       }, '')
       .trim();
 
-    allMessages = this.pastSummarizedMessages + notSummarizedMessages;
+    allMessages = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages;
 
     if (this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessages);
@@ -118,17 +115,14 @@ class ChatContextBuilder {
     const lastMessage = nonEmptyMessages[nonEmptyMessages.length - 1];
     if (lastMessage && lastMessage.id > this.lastSummarizedMessageID) {
       let lastMessageContent = lastMessage.content;
-      if (lastMessage.role == 'tool' && lastMessage.name == 'read_file') {
-        lastMessageContent = `File read successfully.`;
-      }
       allMessages +=
-        `\n${lastMessage.role == 'tool' ? '"assistant" ran a tool' : lastMessage.role}:\n${lastMessageContent}\n`.trim();
+        `\n${lastMessage.role == 'tool' ? `"assistant" ran a tool ${lastMessage.name}` : `"${lastMessage.role}" said:`}:\n${lastMessageContent}\n`.trim();
     }
 
     return allMessages
       ? {
           role: 'system',
-          content: `Summary of conversation and what was done:\n\n ${allMessages}`,
+          content: `Summary of conversation and what was done: ${allMessages}`,
         }
       : null;
   }
@@ -183,7 +177,7 @@ class ChatContextBuilder {
       .join('\n\n');
 
     return fileContentsWithNames
-      ? `\n\nExisting files (recently modified by assistant or user):\n\n${fileContentsWithNames}`
+      ? `\n\nExisting files (recently modified or read by assistant or user. Do not read these files again):\n\n${fileContentsWithNames}`
       : '';
   }
 
