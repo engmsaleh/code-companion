@@ -54,7 +54,7 @@ class Agent {
         chatController.chat.addFrontendMessage('error', 'Action was rejected');
         chatController.chat.addBackendMessage(
           'tool',
-          'User rejected this function call',
+          `User rejected tool call: \n ${JSON.stringify(toolCall, null, 2)}`,
           null,
           functionName,
           toolCall.id,

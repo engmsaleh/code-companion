@@ -10,15 +10,20 @@ const { getFilePath } = require('../tools/tools');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 4000;
+const MAX_RELEVANT_FILES_TOKENS = 5000;
 
 class ChatContextBuilder {
   constructor(chat) {
     this.chat = chat;
-    this.lastSummarizedMessageID = -1;
+    this.lastSummarizedMessageID = 0;
+    this.lastMessageIdForRelevantFiles = 0;
+    this.reduceRelevantFilesContextMessageId = 0;
+    this.lastEditedFilesTimestamp = chat.startTimestamp;
+    this.taskRelevantFiles = [];
     this.pastSummarizedMessages = '';
   }
 
-  async buildMessages(userMessage) {
+  async buildMessages(userMessage, reflectMessage = null) {
     this.backendMessages = this.chat.backendMessages.map((message) => _.omit(message, ['id']));
 
     return [
@@ -27,6 +32,7 @@ class ChatContextBuilder {
       await this.addSummaryOfMessages(),
       await this.addRelevantSourceCodeMessage(),
       this.addLastUserMessage(userMessage),
+      this.addReflectMessage(reflectMessage),
     ].filter((message) => message !== null);
   }
 
@@ -94,7 +100,7 @@ class ChatContextBuilder {
       .reduce((acc, message) => {
         if (message.content) {
           let content = message.content;
-          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said:`}:\n${content}\n`;
+          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said`}:\n${content}\n`;
         }
         return acc;
       }, '')
@@ -116,7 +122,7 @@ class ChatContextBuilder {
     if (lastMessage && lastMessage.id > this.lastSummarizedMessageID) {
       let lastMessageContent = lastMessage.content;
       allMessages +=
-        `\n${lastMessage.role == 'tool' ? `"assistant" ran a tool ${lastMessage.name}` : `"${lastMessage.role}" said:`}:\n${lastMessageContent}\n`.trim();
+        `\n${lastMessage.role == 'tool' ? `\n"assistant" ran a tool ${lastMessage.name}` : `"${lastMessage.role}" said`}:\n${lastMessageContent}\n`.trim();
     }
 
     return allMessages
@@ -164,35 +170,37 @@ class ChatContextBuilder {
   }
 
   async getRelevantFilesContents() {
-    const touchedFiles = await this.getListOfTouchedFiles();
-    if (touchedFiles.length === 0) {
+    const relevantFileNames = await this.getListOfRelevantFiles();
+    if (relevantFileNames.length === 0) {
       return '';
     }
 
-    const fileReadPromises = touchedFiles.map((file) => this.readFile(file));
-    const fileContents = await Promise.all(fileReadPromises);
+    let fileContents = await this.getFileContents(relevantFileNames);
+    fileContents = await this.reduceRelevantFilesContext(fileContents, relevantFileNames);
 
-    const fileContentsWithNames = touchedFiles
-      .map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`)
-      .join('\n\n');
-
-    return fileContentsWithNames
-      ? `\n\nExisting files (recently modified or read by assistant or user. Do not read these files again):\n\n${fileContentsWithNames}`
+    return fileContents
+      ? `\n\nExisting files (recently modified or read by assistant or user. Do not read these files again):\n\n${fileContents}`
       : '';
   }
 
-  async readFile(filePath) {
-    try {
-      const content = await fs.promises.readFile(filePath, 'utf8');
-      return content;
-    } catch (error) {
-      console.error(`Error reading file ${filePath}:`, error);
-      return null;
-    }
+  async getListOfRelevantFiles() {
+    const chatInteractionFiles = await this.getChatInteractionFiles();
+    const editedFiles = chatController.agent.projectController.getRecentModifiedFiles(this.lastEditedFilesTimestamp);
+    this.lastEditedFilesTimestamp = Date.now();
+    const combinedFiles = [...new Set([...this.taskRelevantFiles, ...chatInteractionFiles, ...editedFiles])].slice(
+      0,
+      30,
+    );
+    this.taskRelevantFiles = combinedFiles;
+
+    console.log('Relevant files:', combinedFiles);
+
+    return combinedFiles;
   }
 
-  async getListOfTouchedFiles() {
+  async getChatInteractionFiles() {
     const chatFiles = this.backendMessages
+      .filter((message) => message.id > this.lastMessageIdForRelevantFiles)
       .filter((message) => message.role === 'assistant' && message.tool_calls)
       .flatMap((message) =>
         message.tool_calls
@@ -206,14 +214,77 @@ class ChatContextBuilder {
           })
           .filter((file) => file !== undefined),
       );
-
     const normalizedFilePaths = await Promise.all(chatFiles.map((file) => getFilePath(file)));
-    const existingFiles = normalizedFilePaths.filter((file) => fs.existsSync(file)).reverse();
+    const chatInteractionFiles = normalizedFilePaths.filter((file) => fs.existsSync(file)).reverse();
+    this.lastMessageIdForRelevantFiles = this.backendMessages.length - 1;
 
-    const editedFiles = chatController.agent.projectController.getRecentModifiedFiles();
-    const combinedFiles = [...new Set([...editedFiles, ...existingFiles])].slice(0, 10);
+    return chatInteractionFiles;
+  }
 
-    return combinedFiles;
+  async getFileContents(fileList) {
+    if (fileList.length === 0) {
+      return '';
+    }
+
+    const fileReadPromises = fileList.map((file) => this.readFile(file));
+    const fileContents = await Promise.all(fileReadPromises);
+
+    return fileList.map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`).join('\n\n');
+  }
+
+  async reduceRelevantFilesContext(fileContents, fileList) {
+    const fileContentTokenCount = this.chat.countTokens(fileContents);
+    const lastMessageId = this.chat.backendMessages.length - 1;
+    if (
+      (fileContentTokenCount > MAX_RELEVANT_FILES_TOKENS || fileList.length > 5) &&
+      (lastMessageId - this.reduceRelevantFilesContextMessageId >= 5 || this.reduceRelevantFilesContextMessageId === 0)
+    ) {
+      this.reduceRelevantFilesContextMessageId = lastMessageId;
+      const relevantFiles = await this.updateListOfRelevantFiles(fileContents);
+      if (Array.isArray(relevantFiles)) {
+        this.taskRelevantFiles = relevantFiles.slice(0, 10);
+        return await this.getFileContents(relevantFiles);
+      }
+    }
+
+    return fileContents;
+  }
+
+  async updateListOfRelevantFiles(fileContents) {
+    console.log('Updating list of relevant files');
+    const messageHistory = [this.addTaskMessage(), await this.addSummaryOfMessages()];
+
+    const prompt = `AI coding assistnant is helping user with a task.
+    Here is summary of the conversation and what was done: ${messageHistory}
+    
+    The content of the files is too long to process. Please select the most relevant files that assistant will need to continue coding.
+    The files are:\n\n${fileContents}
+    
+    Focusing on the end of our conversation, please include only required files that are needed to continue coding.
+    Respond with the array of file paths exactly as they appeared (do not shorten or change file path) in the list above separated by comma.
+    If all files are relevant, respond with a list of all files.
+    Order files by importance, most important first.
+    `;
+
+    const result = await chatController.backgroundTask.run({
+      prompt,
+      format: ['file1', 'file2', 'file3', '...'],
+      model: chatController.settings.selectedModel,
+    });
+
+    console.log('Relevant files:', result);
+
+    return result;
+  }
+
+  async readFile(filePath) {
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      return content;
+    } catch (error) {
+      console.error(`Error reading file ${filePath}:`, error);
+      return null;
+    }
   }
 
   addLastUserMessage(userMessage) {
@@ -224,6 +295,17 @@ class ChatContextBuilder {
     return {
       role: 'user',
       content: userMessage,
+    };
+  }
+
+  addReflectMessage(reflectMessage) {
+    if (!reflectMessage) {
+      return null;
+    }
+
+    return {
+      role: 'user',
+      content: `Assistant's last message was:\n\n${JSON.stringify(reflectMessage, null, 2)}\n\nNothing was run. Respond again with tool calls but improve code, use best practices and fix bugs if possible.`,
     };
   }
 

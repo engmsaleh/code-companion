@@ -53,7 +53,8 @@ package-lock.json
 .*
 
 # Ignore Python specific
-
+*.cfg
+*.h
 *.pyc
 *.egg-info
 *.egg
