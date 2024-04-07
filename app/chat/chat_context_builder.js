@@ -134,8 +134,6 @@ class ChatContextBuilder {
   }
 
   async summarizeMessages(messages) {
-    console.log('Summarizing messages:', messages);
-    console.log(this.lastSummarizedMessageID);
     const prompt = `
     Task:
     ${this.chat.task}
@@ -152,7 +150,6 @@ class ChatContextBuilder {
     });
 
     if (summary) {
-      console.log('Summary:', summary);
       return summary;
     } else {
       return messages;
@@ -192,8 +189,6 @@ class ChatContextBuilder {
       30,
     );
     this.taskRelevantFiles = combinedFiles;
-
-    console.log('Relevant files:', combinedFiles);
 
     return combinedFiles;
   }
@@ -251,7 +246,6 @@ class ChatContextBuilder {
   }
 
   async updateListOfRelevantFiles(fileContents) {
-    console.log('Updating list of relevant files');
     const messageHistory = [this.addTaskMessage(), await this.addSummaryOfMessages()];
 
     const prompt = `AI coding assistnant is helping user with a task.
@@ -271,8 +265,6 @@ class ChatContextBuilder {
       format: ['file1', 'file2', 'file3', '...'],
       model: chatController.settings.selectedModel,
     });
-
-    console.log('Relevant files:', result);
 
     return result;
   }
