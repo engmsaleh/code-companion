@@ -280,10 +280,10 @@ class ChatController {
     } catch (error) {
       this.handleError(error);
     } finally {
+      this.isProcessing = false;
       viewController.updateLoadingIndicator(false);
     }
 
-    this.isProcessing = false;
     await this.agent.runAgent(apiResponseMessage);
   }
 

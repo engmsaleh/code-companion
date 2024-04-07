@@ -268,14 +268,10 @@ class ProjectController {
     );
   }
 
-  getRecentModifiedFiles() {
+  getRecentModifiedFiles(sinceDateTime) {
     if (!this.currentProject) {
       return [];
     }
-
-    let sinceDateTime = chatController.chat.startTimestamp;
-    const oneHourAgo = new Date(new Date().getTime() - 60 * 60 * 1000);
-    sinceDateTime = new Date(Math.max(new Date(sinceDateTime).getTime(), oneHourAgo.getTime()));
 
     this.updateListOfFiles();
     const recentFiles = this.filesList
