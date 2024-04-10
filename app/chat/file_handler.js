@@ -19,8 +19,18 @@ async function readFile(filepath) {
 
     if (type && ['png', 'jpg', 'jpeg', 'gif'].includes(type.ext)) {
       const imageHandler = new ImageHandler();
-      const imageDescription = await imageHandler.imageToText(filepath);
-      return imageDescription;
+      const base64Image = await imageHandler.imageToText(filepath);
+      const content = [
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:image/jpeg;base64,${base64Image}`,
+          },
+        },
+      ];
+      chatController.chat.addBackendMessage('user', content);
+
+      return 'image uploaded';
     }
 
     chatController.chat.addFrontendMessage('error', `File type is not supported: (${basename})`);

@@ -29,6 +29,7 @@ Always create a professional-looking UI with a lot of white space and ensure gre
 Don't guess or assume file content before overwriting it to make some changes.
 Any new required task dependencies should be installed locally.
 For each file write fully functional code, with no placeholders that implements all required functionality.
+When searching codebase, provide long search query describing portion of code you are looking for. Note that you can't search "invalid" code, "undefined" etc, codebase search only returns code snippets relevant to search query and doesn't understand code logic.
 
 When an error occurs:
 
@@ -50,12 +51,8 @@ const FINISH_TASK_PROMPT_TEMPLATE = `When finished with all steps for the task, 
 Once all issues are fixed from above, launch the task with the default application for user to check.
 Ask user before implementing any suggested improvements or optimizations for approval.`;
 
-const VISION_MODEL_PROMPT = `Describe the image in all possible details.
-Include colors, shapes, position, and any text for each element, and all relationships between elements.`;
-
 module.exports = {
   PLAN_PROMPT_TEMPLATE,
   TASK_EXECUTION_PROMPT_TEMPLATE,
   FINISH_TASK_PROMPT_TEMPLATE,
-  VISION_MODEL_PROMPT,
 };

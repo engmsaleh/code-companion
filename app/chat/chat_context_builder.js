@@ -30,10 +30,19 @@ class ChatContextBuilder {
       await this.addSystemMessage(),
       this.addTaskMessage(),
       await this.addSummaryOfMessages(),
+      ...this.addImageMessages(),
       await this.addRelevantSourceCodeMessage(),
       this.addLastUserMessage(userMessage),
       this.addReflectMessage(reflectMessage),
     ].filter((message) => message !== null);
+  }
+
+  addImageMessages() {
+    const imageMessages = this.backendMessages.filter(
+      (message) => Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url'),
+    );
+
+    return imageMessages;
   }
 
   async addSystemMessage() {
@@ -231,8 +240,9 @@ class ChatContextBuilder {
     const fileContentTokenCount = this.chat.countTokens(fileContents);
     const lastMessageId = this.chat.backendMessages.length - 1;
     if (
-      (fileContentTokenCount > MAX_RELEVANT_FILES_TOKENS || fileList.length > 5) &&
-      (lastMessageId - this.reduceRelevantFilesContextMessageId >= 5 || this.reduceRelevantFilesContextMessageId === 0)
+      fileContentTokenCount > MAX_RELEVANT_FILES_TOKENS &&
+      fileList.length > 3 &&
+      (lastMessageId - this.reduceRelevantFilesContextMessageId >= 10 || this.reduceRelevantFilesContextMessageId === 0)
     ) {
       this.reduceRelevantFilesContextMessageId = lastMessageId;
       const relevantFiles = await this.updateListOfRelevantFiles(fileContents);
@@ -251,10 +261,10 @@ class ChatContextBuilder {
     const prompt = `AI coding assistnant is helping user with a task.
     Here is summary of the conversation and what was done: ${messageHistory}
     
-    The content of the files is too long to process. Please select the most relevant files that assistant will need to continue coding.
+    The content of the files is too long to process. Out of list of files below select the most relevant files that assistant still needs to complete user's task.
     The files are:\n\n${fileContents}
     
-    Focusing on the end of our conversation, please include only required files that are needed to continue coding.
+    Include only required files, exclude files that are already processed or most likely not needed.
     Respond with the array of file paths exactly as they appeared (do not shorten or change file path) in the list above separated by comma.
     If all files are relevant, respond with a list of all files.
     Order files by importance, most important first.
