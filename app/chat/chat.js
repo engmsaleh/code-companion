@@ -19,7 +19,7 @@ class Chat {
   }
 
   isEmpty() {
-    return this.frontendMessages.length === 0;
+    return this.frontendMessages.filter((message) => message.role === 'user').length === 0 && this.task === null;
   }
 
   getNextId() {
@@ -162,6 +162,7 @@ class Chat {
     viewController.scrollToBottom();
     viewController.addCopyCodeButtons();
     this.renderTask();
+    viewController.updateProjectsWindow();
   }
 
   updateStreamingMessage(message) {

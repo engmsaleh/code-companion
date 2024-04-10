@@ -128,6 +128,15 @@ class ViewController {
             </div>`;
   }
 
+  updateProjectsWindow() {
+    const chat = chatController.chat;
+    if (chat.frontendMessages.length === 0 && chat.task === null) {
+      viewController.showWelcomeContent();
+    } else {
+      document.getElementById('projectsCard').innerHTML = '';
+    }
+  }
+
   changeTheme(theme) {
     const htmlElement = document.querySelector('html');
     htmlElement.setAttribute('data-bs-theme', theme);
@@ -222,7 +231,7 @@ class ViewController {
         </div>
       </div>
     `;
-    document.getElementById('output').innerHTML = welcomeContent;
+    document.getElementById('projectsCard').innerHTML = welcomeContent;
   }
 }
 
