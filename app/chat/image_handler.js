@@ -1,29 +1,30 @@
-const fs = require('fs');
-const sharp = require('sharp');
-const MAX_IMAGE_DIMENSION = 1024;
+const Jimp = require('jimp');
+const MAX_IMAGE_DIMENSION = 1280;
 
 class ImageHandler {
   constructor() {}
 
   async imageToBase64(filePath) {
     const imageBuffer = await this.resizeImageIfNeeded(filePath);
-    const base64Image = imageBuffer.toString('base64');
+    const mimeType = imageBuffer.getMIME();
+    const base64Image = await imageBuffer.getBase64Async(mimeType);
+
     return base64Image;
   }
 
   async resizeImageIfNeeded(filePath) {
-    const image = sharp(filePath);
-    const metadata = await image.metadata();
+    const image = await Jimp.read(filePath);
+    const { width, height } = image.bitmap;
 
-    if (metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION) {
-      return image
-        .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
-          fit: sharp.fit.inside,
-          withoutEnlargement: true,
-        })
-        .toBuffer();
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+      const aspectRatio = width / height;
+      if (aspectRatio > 1) {
+        return image.resize(MAX_IMAGE_DIMENSION, Jimp.AUTO).quality(90);
+      } else {
+        return image.resize(Jimp.AUTO, MAX_IMAGE_DIMENSION).quality(90);
+      }
     } else {
-      return image.toBuffer();
+      return image;
     }
   }
 }

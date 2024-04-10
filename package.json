@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.23.1",
+  "version": "5.23.3",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -89,6 +89,7 @@
     "ignore": "^5.2.4",
     "interactjs": "^1.10.18",
     "istextorbinary": "^9.5.0",
+    "jimp": "^0.22.12",
     "js-tiktoken": "^1.0.7",
     "jsdom": "^24.0.0",
     "langchain": "^0.1.5",
@@ -99,7 +100,6 @@
     "node-pty": "^1.0.0",
     "openai": "^4.20.1",
     "read-chunk": "^3.2.0",
-    "sharp": "^0.33.3",
     "uuid": "^9.0.0",
     "xterm": "^5.2.1",
     "xterm-addon-fit": "^0.8.0",
