@@ -7,20 +7,18 @@ const autosize = require('autosize');
 const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
-const { reduceTokensUsage } = require('./static/constants');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const { toolDefinitions, formattedTools } = require('./tools/tools');
+const { defaultModel } = require('./static/models_config');
 
 const MAX_RETRIES = 3;
 const DEFAULT_SETTINGS = {
   apiKey: '',
   baseUrl: '',
-  selectedModel: 'gpt-4-1106-preview',
+  selectedModel: defaultModel,
   approvalRequired: true,
-  maxTokensPerRequest: 10000,
-  maxTokensPerChat: 100000,
-  maxFilesToEmbed: 500,
+  maxFilesToEmbed: 1000,
   commandToOpenFile: 'code',
   theme: 'dark',
 };
@@ -145,8 +143,6 @@ class ChatController {
         console.log(`Calling API (${this.chat.countTokens(JSON.stringify(api_messages))} tokens)`, callParams);
       }
 
-      this.processTokensUsage(callParams);
-
       const stream = await this.openai.beta.chat.completions.stream(callParams, {
         maxRetries: this.MAX_RETRIES,
         signal: this.abortController.signal,
@@ -161,9 +157,7 @@ class ChatController {
         console.log('API response:', chatCompletion);
       }
 
-      if (chatCompletion?.choices[0]?.message) {
-        this.conversationTokens += this.chat.countTokens(JSON.stringify(chatCompletion?.choices[0].message));
-      }
+      this.estimateTokenUsage(api_messages, chatCompletion);
 
       // if function call try parsing to retry
       if (chatCompletion?.choices[0].message?.function_call) {
@@ -190,35 +184,16 @@ class ChatController {
     }
   }
 
-  processTokensUsage(callParams) {
-    this.lastRequestTokens = this.chat.countTokens(JSON.stringify(callParams.messages));
+  estimateTokenUsage(api_messages, chatCompletion) {
+    this.lastRequestTokens += this.chat.countTokens(
+      JSON.stringify(api_messages.filter((message) => !Array.isArray(message.content))),
+    );
+
     this.conversationTokens += this.lastRequestTokens;
 
-    if (this.lastRequestTokens > this.settings.maxTokensPerRequest) {
-      throw new Error(
-        `\nThe number of tokens in the current request (${this.lastRequestTokens}) exceeds maximum value in settings: ${this.settings.maxTokensPerRequest}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
-          ${reduceTokensUsage}
-          `,
-      );
+    if (chatCompletion?.choices[0]?.message) {
+      this.conversationTokens += this.chat.countTokens(JSON.stringify(chatCompletion?.choices[0].message));
     }
-    if (this.conversationTokens > this.settings.maxTokensPerChat) {
-      throw new Error(
-        `The total number of tokens used in this chat (${this.conversationTokens}) exceeds ${this.settings.maxTokensPerChat}\n\nYou can adjust this value in settings and click "Retry" button.\n\n
-          ${reduceTokensUsage}
-          `,
-      );
-    }
-  }
-
-  countTokensForTools() {
-    const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
-    const tokensJson = enabledTools.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    }));
-
-    return toolsTokens;
   }
 
   retry() {
@@ -228,7 +203,7 @@ class ChatController {
   async process(query, renderUserMessage = true) {
     if (this.isProcessing) {
       console.error('Already processing');
-      return;
+      // return;
     }
     this.isProcessing = true;
 
@@ -330,8 +305,8 @@ class ChatController {
 
   async processNewUserMessage(userMessage) {
     if (this.chat.isEmpty()) {
-      document.getElementById('output').innerHTML = '';
       this.chat.addTask(userMessage);
+      document.getElementById('projectsCard').innerHTML = '';
       await this.process();
     } else {
       await this.process(userMessage);
@@ -370,6 +345,7 @@ class ChatController {
     this.conversationTokens = 0;
     this.lastRequestTokens = 0;
     viewController.updateFooterMessage();
+    viewController.updateProjectsWindow();
 
     this.agent.projectState = {
       complexity: '',
@@ -379,7 +355,6 @@ class ChatController {
     };
 
     onboardingController.showAllTips();
-    viewController.showWelcomeContent();
     viewController.onShow();
   }
 }

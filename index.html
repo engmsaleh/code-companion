@@ -53,6 +53,7 @@
     <main class="flex-shrink-0 pt-5">
       <div>
         <div id="search_result_container" class="mx-3 mt-4 mb-5 flex-grow-1 pb-5">
+          <div id="projectsCard" class="m-2"></div>
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
           <div id="approval_buttons" class="text-center mb-3" hidden>
@@ -164,18 +165,6 @@
           <input type="text" class="form-control" id="baseUrl" placeholder="Optional" />
           <button class="btn btn-outline-secondary" type="button" id="saveBaseURL" onclick="chatController.saveSetting('baseUrl')">Save</button>
         </div>
-        
-        <label for="maxTokensPerRequest" class="form-label mt-4">Max tokens per request:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="maxTokensPerRequest" placeholder="Max tokens per request" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerRequest" onclick="chatController.saveSetting('maxTokensPerRequest')">Save</button>
-        </div>
-        
-        <label for="maxTokensPerChat" class="form-label mt-4">Max tokens per chat:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="maxTokensPerChat" placeholder="Max tokens per chat" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxTokensPerChat" onclick="chatController.saveSetting('maxTokensPerChat')">Save</button>
-        </div>
 
         <label for="maxFilesToEmbed" class="form-label mt-4">Max files to index (Code search):</label>
         <div class="input-group">
@@ -183,7 +172,7 @@
           <button class="btn btn-outline-secondary" type="button" id="saveMaxFilesToEmbed" onclick="chatController.saveSetting('maxFilesToEmbed');">Save</button>
         </div>
 
-        <label for="commandToOpenFile" class="form-label mt-4">Command to open a file via link:</label>
+        <label for="commandToOpenFile" class="form-label mt-4">Command to open a file in IDE:</label>
         <div class="input-group">
           <input type="text" class="form-control" id="commandToOpenFile" placeholder="Example: 'code' to open VS Code" />
           <button class="btn btn-outline-secondary" type="button" onclick="chatController.saveSetting('commandToOpenFile');">Save</button>

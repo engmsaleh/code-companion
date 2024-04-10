@@ -28,9 +28,9 @@ class ChatContextBuilder {
 
     return [
       await this.addSystemMessage(),
+      ...this.addImageMessages(),
       this.addTaskMessage(),
       await this.addSummaryOfMessages(),
-      ...this.addImageMessages(),
       await this.addRelevantSourceCodeMessage(),
       this.addLastUserMessage(userMessage),
       this.addReflectMessage(reflectMessage),
@@ -103,7 +103,13 @@ class ChatContextBuilder {
   async addSummaryOfMessages() {
     let allMessages = '';
     const nonEmptyMessages = this.chat.backendMessages.filter((message) => message.content);
-    const messagesToSummarize = nonEmptyMessages.slice(0, -1);
+    const preprocessedMessages = nonEmptyMessages.map((message) => {
+      if (Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url')) {
+        return { ...message, content: 'image added to chat' };
+      }
+      return message;
+    });
+    const messagesToSummarize = preprocessedMessages.slice(0, -1);
     const notSummarizedMessages = messagesToSummarize
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {

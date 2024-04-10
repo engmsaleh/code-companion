@@ -26,24 +26,28 @@ pre {
 }
 
 #terminal_resize_handle {
-    height: 3px;
+  height: 3px;
 }
 
 #terminal_resize_handle:hover {
-    background-color: var(--bs-link-hover-color);
+  background-color: var(--bs-link-hover-color);
 }
 
+pre {
+  max-height: 400px;
+  overflow-y: auto;
+}
 
 @font-face {
-  font-family: "FiraCodeNerdFont";
-  src: url("./fonts/FiraCodeNerdFont-Regular.ttf") format("truetype");
+  font-family: 'FiraCodeNerdFont';
+  src: url('./fonts/FiraCodeNerdFont-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: "FiraCodeNerdFont";
-  src: url("./fonts/FiraCodeNerdFont-Bold.ttf") format("truetype");
+  font-family: 'FiraCodeNerdFont';
+  src: url('./fonts/FiraCodeNerdFont-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
 }

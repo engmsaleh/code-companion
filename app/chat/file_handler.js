@@ -19,18 +19,22 @@ async function readFile(filepath) {
 
     if (type && ['png', 'jpg', 'jpeg', 'gif'].includes(type.ext)) {
       const imageHandler = new ImageHandler();
-      const base64Image = await imageHandler.imageToText(filepath);
+      const base64Image = await imageHandler.imageToBase64(filepath);
       const content = [
         {
           type: 'image_url',
           image_url: {
-            url: `data:image/jpeg;base64,${base64Image}`,
+            url: `data:image/${type.ext};base64,${base64Image}`,
           },
         },
       ];
       chatController.chat.addBackendMessage('user', content);
+      chatController.chat.addFrontendMessage(
+        'file',
+        `<div class="d-flex justify-content-center"><img src="data:image/${type.ext};base64,${base64Image}" class="img-fluid m-3" alt="image preview" style="max-height: 200px;"></div>`,
+      );
 
-      return 'image uploaded';
+      return null;
     }
 
     chatController.chat.addFrontendMessage('error', `File type is not supported: (${basename})`);
@@ -46,10 +50,9 @@ async function processFile(filepath) {
   if (!fileTextContent) return;
 
   const formattedData = `Content of the file ${basename}:\n\n${fileTextContent}\n\nUse content above of the file ${basename} to answer questions from user below`;
-  const tokens = chatController.chat.countTokens(fileTextContent);
 
   chatController.chat.addBackendMessage('user', formattedData);
-  chatController.chat.addFrontendMessage('file', `${basename} uploaded (${tokens} tokens)`);
+  chatController.chat.addFrontendMessage('file', `${basename} uploaded`);
 }
 
 function readTextFile(filePath) {
