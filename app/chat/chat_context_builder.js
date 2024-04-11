@@ -209,7 +209,7 @@ class ChatContextBuilder {
   }
 
   async getChatInteractionFiles() {
-    const chatFiles = this.backendMessages
+    const chatFiles = this.chat.backendMessages
       .filter((message) => message.id > this.lastMessageIdForRelevantFiles)
       .filter((message) => message.role === 'assistant' && message.tool_calls)
       .flatMap((message) =>
