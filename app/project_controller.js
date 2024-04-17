@@ -278,8 +278,9 @@ class ProjectController {
       .map((filePath) => ({
         path: filePath,
         mtime: fs.statSync(filePath).mtime,
+        isDirectory: fs.statSync(filePath).isDirectory(),
       }))
-      .filter((file) => file.mtime > sinceDateTime)
+      .filter((file) => file.mtime > sinceDateTime && !file.isDirectory)
       .sort((a, b) => b.mtime - a.mtime)
       .slice(0, 10)
       .map((file) => file.path);

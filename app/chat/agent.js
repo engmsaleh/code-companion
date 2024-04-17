@@ -2,6 +2,7 @@ const fs = require('graceful-fs');
 const path = require('path');
 const ProjectController = require('../project_controller');
 const { toolDefinitions, previewMessageMapping } = require('../tools/tools');
+const { isFileExists, normalizedFilePath } = require('../utils');
 
 class Agent {
   constructor() {
@@ -39,6 +40,11 @@ class Agent {
 
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
+      const allowedToExecute = await this.isToolAllowedToExecute(toolCall);
+      if (allowedToExecute === false) {
+        continue;
+      }
+
       this.showToolCallPreview(toolCall);
       const decision = await this.waitForDecision(functionName);
 
@@ -64,6 +70,37 @@ class Agent {
     }
 
     return isUserRejected;
+  }
+
+  async isToolAllowedToExecute(toolCall) {
+    // Don't allow code replacement or writing to files if file is not in chat context
+    const toolsToCheck = ['create_or_overwrite_file', 'replace_string_in_file'];
+    const toolName = toolCall.function.name;
+
+    if (!toolsToCheck.includes(toolName)) {
+      return true;
+    }
+
+    const args = this.parseArguments(toolCall.function.arguments);
+    const filePath = await normalizedFilePath(args.targetFile);
+    const fileExists = await isFileExists(filePath);
+
+    // allow creating file if it doesn't exist
+    if (toolName === 'create_or_overwrite_file' && !fileExists) {
+      return true;
+    }
+
+    // check if file is in chat context
+    const chatContextFiles = chatController.chat.chatContextBuilder.taskRelevantFiles;
+    const fileInChatContext = chatContextFiles.includes(filePath);
+
+    if (fileInChatContext === false) {
+      console.error('Tool rejected', toolCall);
+      console.log('taskRelevantFiles', chatController.chat.chatContextBuilder.taskRelevantFiles);
+      chatController.chat.chatContextBuilder.taskRelevantFiles.push(filePath);
+    }
+
+    return fileInChatContext;
   }
 
   async waitForDecision(functionName) {

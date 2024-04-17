@@ -5,6 +5,7 @@ const { contextualCompress } = require('./contextual_compressor');
 const axios = require('axios');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
+const { normalizedFilePath } = require('../utils');
 
 const toolDefinitions = [
   {
@@ -139,7 +140,7 @@ async function createFile({ targetFile, createText }) {
     return respondTargetFileNotProvided();
   }
 
-  const filePath = await getFilePath(targetFile);
+  const filePath = await normalizedFilePath(targetFile);
   if (!fs.existsSync(filePath)) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
@@ -154,7 +155,7 @@ async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }
     return respondTargetFileNotProvided();
   }
 
-  const filePath = await getFilePath(targetFile);
+  const filePath = await normalizedFilePath(targetFile);
   if (!fs.existsSync(filePath)) {
     const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
     chatController.chat.addFrontendMessage('function', doesntExistMessage);
@@ -193,7 +194,7 @@ async function readFile({ targetFile }) {
     return respondTargetFileNotProvided();
   }
 
-  const filePath = await getFilePath(targetFile);
+  const filePath = await normalizedFilePath(targetFile);
   if (!fs.existsSync(filePath)) {
     const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
     chatController.chat.addFrontendMessage('function', doesntExistMessage);
@@ -281,15 +282,6 @@ async function googleSearch({ query }) {
   return JSON.stringify(firstCompressedResult);
 }
 
-async function getFilePath(targetFile) {
-  targetFile = path.normalize(targetFile);
-  if (path.isAbsolute(targetFile)) {
-    return targetFile;
-  }
-  await chatController.terminalSession.getCurrentDirectory();
-  return path.join(chatController.agent.currentWorkingDir, targetFile);
-}
-
 async function openFileLink(filepath) {
   try {
     let absolutePath = path.normalize(filepath);
@@ -298,7 +290,7 @@ async function openFileLink(filepath) {
       if (chatController.agent.projectController.currentProject) {
         absolutePath = path.join(chatController.agent.projectController.currentProject.path, absolutePath);
       } else {
-        absolutePath = await getFilePath(absolutePath);
+        absolutePath = await normalizedFilePath(absolutePath);
       }
     }
 
@@ -402,5 +394,4 @@ module.exports = {
   toolDefinitions,
   formattedTools,
   previewMessageMapping,
-  getFilePath,
 };

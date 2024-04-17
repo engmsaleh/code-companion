@@ -130,6 +130,8 @@ class ChatController {
 
   async callAPI(api_messages, model = this.settings.selectedModel, retryCount = 0) {
     try {
+      this.lastRequestTokens = 0;
+
       const callParams = {
         model,
         messages: api_messages,
