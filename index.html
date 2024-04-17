@@ -57,8 +57,15 @@
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
           <div id="approval_buttons" class="text-center mb-3" hidden>
-            <button id="reject_button" type="button" class="btn btn-link-secondary mx-2 btn-sm">Reject</button>
-            <button id="approve_button" type="button" class="btn btn-primary mx-2 btn-sm">Approve</button>
+            <button id="reject_button" type="button" class="btn btn-link-secondary mx-2 btn-sm">
+              <i class="bi bi-x-circle"></i> Reject
+            </button>
+            <button id="reflect_button" type="button" class="btn btn-outline-primary mx-2 btn-sm">
+              <i class="bi bi-arrow-clockwise"></i> Improve
+            </button>
+            <button id="approve_button" type="button" class="btn btn-primary mx-2 btn-sm">
+              <i class="bi bi-check-lg"></i> Approve
+            </button>
           </div>
           <div id="retry_button" class="my-3 text-center" hidden>
             <button type="button" class="btn btn-outline-secondary" onclick="chatController.retry()">

@@ -25,9 +25,11 @@ class Agent {
       chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, toolCalls);
 
       if (toolCalls) {
-        const userRejected = await this.runTools(toolCalls);
-        if (!userRejected) {
-          await chatController.process('', false);
+        const { decision, reflectMessage } = await this.runTools(toolCalls);
+        this.userDecision = null;
+
+        if (decision !== 'reject') {
+          await chatController.process('', false, reflectMessage);
         }
       }
     } catch (error) {
@@ -48,14 +50,14 @@ class Agent {
       this.showToolCallPreview(toolCall);
       const decision = await this.waitForDecision(functionName);
 
-      if (decision) {
+      if (decision === 'approve') {
         const functionCallResult = await this.callFunction(toolCall);
         if (functionCallResult) {
           chatController.chat.addBackendMessage('tool', functionCallResult, null, functionName, toolCall.id);
         } else {
           viewController.updateLoadingIndicator(false);
         }
-      } else {
+      } else if (decision === 'reject') {
         isUserRejected = true;
         chatController.chat.addFrontendMessage('error', 'Action was rejected');
         chatController.chat.addBackendMessage(
@@ -65,11 +67,13 @@ class Agent {
           functionName,
           toolCall.id,
         );
+        return { decision: 'reject', reflectMessage: null };
+      } else if (decision === 'reflect') {
+        return { decision: 'reflect', reflectMessage: toolCall };
       }
-      this.userDecision = null;
     }
 
-    return isUserRejected;
+    return { decision: 'approve', reflectMessage: null };
   }
 
   async isToolAllowedToExecute(toolCall) {
@@ -124,7 +128,7 @@ class Agent {
         }, 200);
       });
     } else {
-      return Promise.resolve(true);
+      return Promise.resolve('approve');
     }
   }
 
