@@ -1,5 +1,3 @@
-const { DEFAULT_BACKGROUND_TASK_MODEL, MODELS_WITH_JSON_SUPPORT } = require('./static/models_config');
-
 const SYSTEM_PROMPT = 'Respond with JSON in the specified format below: ';
 
 class BackgroundTask {
@@ -9,20 +7,18 @@ class BackgroundTask {
     this.chatController = chatController;
   }
 
-  async run({ prompt, format, temperature = 1.0, model = DEFAULT_BACKGROUND_TASK_MODEL }) {
+  async run({ prompt, format, temperature = 1.0, model = this.chatController.settings.selectedModel }) {
     try {
       const messages = this.buildMessages(format, prompt);
       const config = {
         messages: messages,
         temperature: temperature,
+        model: model,
+        response_format: { type: 'json_object' },
       };
 
-      config.model = this.chatController.settings.baseUrl ? this.chatController.selectedModel : model;
-      if (MODELS_WITH_JSON_SUPPORT.includes(config.model)) {
-        config.response_format = { type: 'json_object' };
-      }
-
       const chatCompletion = await this.client.chat.completions.create(config);
+      this.chatController.estimateTokenUsage(messages, chatCompletion);
       const response = JSON.parse(chatCompletion.choices[0].message.content).result;
       this.log(messages, response);
       return response;
