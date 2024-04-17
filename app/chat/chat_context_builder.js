@@ -6,7 +6,7 @@ const {
   FINISH_TASK_PROMPT_TEMPLATE,
 } = require('../static/prompts');
 const { withErrorHandling, getSystemInfo } = require('../utils');
-const { getFilePath } = require('../tools/tools');
+const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 4000;
@@ -199,9 +199,9 @@ class ChatContextBuilder {
     const chatInteractionFiles = await this.getChatInteractionFiles();
     const editedFiles = chatController.agent.projectController.getRecentModifiedFiles(this.lastEditedFilesTimestamp);
     this.lastEditedFilesTimestamp = Date.now();
-    const combinedFiles = [...new Set([...this.taskRelevantFiles, ...chatInteractionFiles, ...editedFiles])].slice(
+    const combinedFiles = [...new Set([...chatInteractionFiles, ...this.taskRelevantFiles, ...editedFiles])].slice(
       0,
-      30,
+      20,
     );
     this.taskRelevantFiles = combinedFiles;
 
@@ -224,8 +224,10 @@ class ChatContextBuilder {
           })
           .filter((file) => file !== undefined),
       );
-    const normalizedFilePaths = await Promise.all(chatFiles.map((file) => getFilePath(file)));
-    const chatInteractionFiles = normalizedFilePaths.filter((file) => fs.existsSync(file)).reverse();
+    const normalizedFilePaths = await Promise.all(chatFiles.map((file) => normalizedFilePath(file)));
+    const chatInteractionFiles = normalizedFilePaths
+      .filter((file) => fs.existsSync(file) && !fs.statSync(file).isDirectory())
+      .reverse();
     this.lastMessageIdForRelevantFiles = this.backendMessages.length - 1;
 
     return chatInteractionFiles;

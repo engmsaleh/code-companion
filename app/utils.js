@@ -1,7 +1,9 @@
 const isTextOrBinary = require('istextorbinary');
 
 async function withTimeout(promise, ms) {
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(`Operation timed out after ${ms} ms`)), ms));
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Operation timed out after ${ms} ms`)), ms),
+  );
   return Promise.race([promise, timeout]);
 }
 
@@ -10,7 +12,12 @@ async function withErrorHandling(fn, ...args) {
     return await fn(...args);
   } catch (error) {
     console.error(error);
-    const errorMessage = typeof error === 'object' && error !== null && 'message' in error ? error.message : typeof error === 'object' ? JSON.stringify(error) : String(error);
+    const errorMessage =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? error.message
+        : typeof error === 'object'
+          ? JSON.stringify(error)
+          : String(error);
 
     chatController.chat.addFrontendMessage('error', `Error occurred. ${errorMessage}`);
   }
@@ -77,9 +84,25 @@ function isTextFile(buffer) {
   return isTextOrBinary.isText(null, buffer);
 }
 
+async function normalizedFilePath(targetFile) {
+  targetFile = path.normalize(targetFile);
+  if (path.isAbsolute(targetFile)) {
+    return targetFile;
+  }
+  await chatController.terminalSession.getCurrentDirectory();
+  return path.join(chatController.agent.currentWorkingDir, targetFile);
+}
+
+async function isFileExists(filePath) {
+  const normalizedPath = await normalizedFilePath(filePath);
+  return fs.existsSync(normalizedPath);
+}
+
 module.exports = {
   withTimeout,
   withErrorHandling,
   getSystemInfo,
   isTextFile,
+  normalizedFilePath,
+  isFileExists,
 };

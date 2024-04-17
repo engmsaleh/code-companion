@@ -109,7 +109,7 @@ class ViewController {
       info: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
       file: { icon: 'paperclip', rowClass: 'mt-3', rowPadding: '3' },
       onboarding: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
-      assistant: { icon: 'chat-right-dots text-success', rowClass: 'mt-3', rowPadding: '3' },
+      assistant: { icon: 'stars text-primary', rowClass: 'mt-3', rowPadding: '3' },
     };
 
     const roleSetting = roleSettings[item.role];
