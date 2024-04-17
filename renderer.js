@@ -75,11 +75,15 @@ const debouncedSubmit = debounce(chatController.processMessageChange, 100);
 document.getElementById('messageInput').addEventListener('keydown', debouncedSubmit);
 
 document.getElementById('reject_button').addEventListener('click', function () {
-  chatController.agent.userDecision = false;
+  chatController.agent.userDecision = 'reject';
+});
+
+document.getElementById('reflect_button').addEventListener('click', function () {
+  chatController.agent.userDecision = 'reflect';
 });
 
 document.getElementById('approve_button').addEventListener('click', function () {
-  chatController.agent.userDecision = true;
+  chatController.agent.userDecision = 'approve';
 });
 
 // Open links in actual web browser not in app

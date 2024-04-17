@@ -315,7 +315,14 @@ class ChatContextBuilder {
 
     return {
       role: 'user',
-      content: `Assistant's last message was:\n\n${JSON.stringify(reflectMessage, null, 2)}\n\nNothing was run. Respond again with tool calls but improve code, use best practices and fix bugs if possible.`,
+      content: `
+      "assistant" proposed this change:
+      
+      ${JSON.stringify(reflectMessage, null, 2)}
+      
+      This can be improved.
+      First step by step explain how code/commamnd can be improved or fixed, what bugs it has, what was not implemented correctly or fully, and what may not work.
+      Then run the same tool but with improved code/command based on your explanation. Only provide code/command in the tool not in message content`,
     };
   }
 

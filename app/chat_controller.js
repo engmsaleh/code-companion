@@ -202,7 +202,7 @@ class ChatController {
     this.process('', false);
   }
 
-  async process(query, renderUserMessage = true) {
+  async process(query, renderUserMessage = true, reflectMessage = null) {
     if (this.isProcessing) {
       console.error('Already processing');
       // return;
@@ -235,7 +235,7 @@ class ChatController {
 
     try {
       viewController.updateLoadingIndicator(true, 'Waiting for ChatGPT ...');
-      const apiMessages = await this.chat.chatContextBuilder.buildMessages(query);
+      const apiMessages = await this.chat.chatContextBuilder.buildMessages(query, reflectMessage);
       const apiResponse = await this.callAPI(apiMessages);
 
       if (!apiResponse) {
@@ -253,7 +253,6 @@ class ChatController {
       }
 
       apiResponseMessage = apiResponse.choices[0].message;
-      messageContent = apiResponseMessage.content;
     } catch (error) {
       this.handleError(error);
     } finally {
@@ -335,7 +334,7 @@ class ChatController {
   async clearChat() {
     trackEvent(`new_chat`);
     this.chat = new Chat();
-    this.agent.userDecision = false;
+    this.agent.userDecision = null;
     this.terminalSession.createShellSession();
     document.getElementById('output').innerHTML = '';
     document.getElementById('retry_button').setAttribute('hidden', true);

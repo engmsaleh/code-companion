@@ -24,6 +24,7 @@ Follow a language and framework-appropriate best practice file naming convention
 Make sure that files contain all imports, types, variables, and constants, etc. Make sure that code in different files is compatible with each other.
 Ensure to implement all code. If you are unsure, write a plausible implementation.
 Write clean self-documenting code. Strictly follow the best software development practices.
+When creating new files, first research the best location and file name, explain why you chose that location and file name, and then create the file.
 Use modern libraries to reduce the amount of code. This includes optimal utilization of installed project libraries and tools, choosing the simplest solution for each task.
 Always create a professional-looking UI with a lot of white space and ensure great UX. Use UI libraries if needed.
 
