@@ -173,12 +173,39 @@ class ChatContextBuilder {
 
   async addRelevantSourceCodeMessage() {
     const projetState = await this.projectStateToText();
+    const relevantFilesAndFoldersToUserMessages = await this.getRelevantFilesAndFoldersToUserMessages();
     const relevantFilesContents = await this.getRelevantFilesContents();
 
     return {
       role: 'system',
-      content: `${projetState}${relevantFilesContents}`,
+      content: `${projetState}${relevantFilesAndFoldersToUserMessages}${relevantFilesContents}`,
     };
+  }
+
+  async getRelevantFilesAndFoldersToUserMessages() {
+    const lastUserMessage = this.chat.backendMessages.find((message) => message.role === 'user');
+
+    const params = {
+      query: this.chat.task + (lastUserMessage ? ' ' + lastUserMessage.content : ''),
+      limit: 10,
+      filenamesOnly: true,
+    };
+    const projectController = chatController.agent.projectController;
+    if (!projectController.currentProject) {
+      return '';
+    }
+
+    const relevantFilesAndFolders = await projectController.searchEmbeddings(params);
+    if (!relevantFilesAndFolders || relevantFilesAndFolders.length === 0) {
+      return '';
+    } else {
+      const relevantFilesAndFoldersMessage = relevantFilesAndFolders
+        .map((result) => {
+          return `- "${result}"`;
+        })
+        .join('\n');
+      return `\n\nThese files might be relevant to user's task:\n\n${relevantFilesAndFoldersMessage}`;
+    }
   }
 
   async getRelevantFilesContents() {

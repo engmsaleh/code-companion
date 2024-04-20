@@ -154,14 +154,20 @@ class ProjectController {
     this.updateProject(this.currentProject);
   }
 
-  async searchEmbeddings({ query, count = 10, rerank = true }) {
+  async searchEmbeddings({ query, count = 10, rerank = true, filenamesOnly = false }) {
     if (!this.currentProject) {
       chatController.chat.addFrontendMessage('error', `No project is open. To use search, open a project first.`);
       return;
     }
 
     await this.createEmbeddings();
-    const results = this.embeddings.search({ query, limit: count, basePath: this.currentProject.path, rerank });
+    const results = this.embeddings.search({
+      query,
+      limit: count,
+      basePath: this.currentProject.path,
+      rerank,
+      filenamesOnly,
+    });
     return results;
   }
 
