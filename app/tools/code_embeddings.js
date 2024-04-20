@@ -5,6 +5,7 @@ const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const { OpenAIEmbeddings } = require('@langchain/openai');
 const { MemoryVectorStore } = require('langchain/vectorstores/memory');
 const detect = require('language-detect');
+const { normalizedFilePath } = require('../utils');
 
 const { isTextFile } = require('../utils');
 const { EMBEDDINGS_VERSION, EMBEDDINGS_MODEL_NAME } = require('../static/models_config');
@@ -133,22 +134,33 @@ class CodeEmbeddings {
     );
   }
 
-  async search({ query, limit = 50, basePath, minScore = 0.4, rerank = true }) {
+  async search({ query, limit = 50, basePath, minScore = 0.4, rerank = true, filenamesOnly = false }) {
     const results = await this.vectorStore.similaritySearchWithScore(query, limit * 2);
     if (!results) return [];
+
+    if (filenamesOnly) {
+      const filePaths = results.map((result) => {
+        const [record, _score] = result;
+        return normalizedFilePath(record.metadata.filePath);
+      });
+      return Promise.all(filePaths).then((paths) => [...new Set(paths)].slice(0, limit));
+    }
 
     const filteredResults = results.filter((result) => {
       const [record, score] = result;
       return score >= minScore && record.pageContent.length > 5;
     });
-    const formattedResults = filteredResults.map((result) => {
-      const [record, _score] = result;
-      return {
-        filePath: pathModule.relative(basePath, record.metadata.filePath),
-        fileContent: record.pageContent,
-        lines: record.metadata.loc.lines,
-      };
-    });
+
+    const formattedResults = await Promise.all(
+      filteredResults.map(async (result) => {
+        const [record, _score] = result;
+        return {
+          filePath: await normalizedFilePath(record.metadata.filePath),
+          fileContent: record.pageContent,
+          lines: record.metadata.loc.lines,
+        };
+      }),
+    );
 
     if (!rerank) {
       return formattedResults.slice(0, limit);
