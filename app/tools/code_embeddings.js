@@ -66,30 +66,42 @@ class CodeEmbeddings {
   }
 
   async updateEmbeddingsForFiles(filesList) {
-    if (!this.openAIApiKey) return;
+    if (!this.openAIApiKey || filesList.length === 0) return;
 
-    viewController.updateLoadingIndicator(true, `Indexing ${filesList.length} files with vector embeddings...`);
-    const promises = filesList.map((file) => this.updateEmbedding(file));
+    const filesNeedingReembedding = filesList.filter((filePath) => this.needsReembedding(filePath));
+
+    viewController.updateLoadingIndicator(
+      true,
+      `Indexing ${filesNeedingReembedding.length} files with vector embeddings...`,
+    );
+    const promises = filesNeedingReembedding.map((file) => this.updateEmbedding(file));
     await Promise.all(promises);
     this.deleteEmbeddingsForFilesNotInList(filesList);
     this.save();
   }
 
+  needsReembedding(filePath) {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    if (!isTextFile(fileContent)) {
+      return false;
+    }
+
+    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION;
+    const fileRecords = this.findRecords(filePath);
+    if (fileRecords.length === 0) return true;
+
+    return fileRecords[0].metadata.hash !== hash;
+  }
+
   async updateEmbedding(filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
+
     if (!isTextFile(fileContent)) {
       return;
     }
-    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION;
-    const fileRecords = this.findRecords(filePath);
 
-    if (fileRecords.length > 0) {
-      if (fileRecords[0].metadata.hash === hash) {
-        return;
-      } else {
-        this.deleteRecords(filePath);
-      }
-    }
+    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION;
+    this.deleteRecords(filePath);
 
     const metadata = {
       filePath,

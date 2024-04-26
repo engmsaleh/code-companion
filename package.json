@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.23.9",
+  "version": "5.23.10",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
