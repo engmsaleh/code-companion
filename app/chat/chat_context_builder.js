@@ -5,12 +5,13 @@ const {
   TASK_EXECUTION_PROMPT_TEMPLATE,
   FINISH_TASK_PROMPT_TEMPLATE,
 } = require('../static/prompts');
-const { withErrorHandling, getSystemInfo } = require('../utils');
+const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 4000;
 const MAX_RELEVANT_FILES_TOKENS = 5000;
+const MAX_FILE_SIZE = 1048576;
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -183,7 +184,19 @@ class ChatContextBuilder {
   }
 
   async getRelevantFilesAndFoldersToUserMessages() {
-    const lastUserMessage = this.chat.backendMessages.find((message) => message.role === 'user');
+    let lastBackendMessage = this.chat.backendMessages[this.chat.backendMessages.length - 1];
+    let lastUserMessage;
+    if (!lastBackendMessage) {
+      lastUserMessage = this.chat.task;
+    } else {
+      if (lastBackendMessage.role === 'user') {
+        lastUserMessage = lastBackendMessage;
+      }
+    }
+
+    if (!lastUserMessage) {
+      return;
+    }
 
     const params = {
       query: this.chat.task + (lastUserMessage ? ' ' + lastUserMessage.content : ''),
@@ -272,6 +285,7 @@ class ChatContextBuilder {
   }
 
   async reduceRelevantFilesContext(fileContents, fileList) {
+    console.log('Current context files are:', fileContents);
     const fileContentTokenCount = this.chat.countTokens(fileContents);
     const lastMessageId = this.chat.backendMessages.length - 1;
     if (
@@ -282,6 +296,7 @@ class ChatContextBuilder {
       this.reduceRelevantFilesContextMessageId = lastMessageId;
       const relevantFiles = await this.updateListOfRelevantFiles(fileContents);
       if (Array.isArray(relevantFiles)) {
+        console.log('Reducing relevant files context', relevantFiles);
         this.taskRelevantFiles = relevantFiles.slice(0, 10);
         return await this.getFileContents(relevantFiles);
       }
@@ -296,7 +311,7 @@ class ChatContextBuilder {
     const prompt = `AI coding assistnant is helping user with a task.
     Here is summary of the conversation and what was done: ${messageHistory}
     
-    The content of the files is too long to process. Out of list of files below select the most relevant files that assistant still needs to complete user's task.
+    The content of the files is too long to process. Out of the list of files below, select the most relevant files that assistant still needs to know contents of in order to complete user's task.
     The files are:\n\n${fileContents}
     
     Include only required files, exclude files that are already processed or most likely not needed.
@@ -316,6 +331,11 @@ class ChatContextBuilder {
 
   async readFile(filePath) {
     try {
+      const stats = await fs.promises.stat(filePath);
+      if (!isTextFile(filePath) || stats.size > MAX_FILE_SIZE) {
+        console.log(`Skipped file (non-text or too large): ${filePath}`);
+        return null;
+      }
       const content = await fs.promises.readFile(filePath, 'utf8');
       return content;
     } catch (error) {
