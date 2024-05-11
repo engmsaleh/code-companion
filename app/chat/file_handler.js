@@ -12,10 +12,6 @@ async function readFile(filepath) {
     if (type && ['docx', 'doc', 'xlsx', 'xls', 'txt', 'csv', 'json'].includes(type.ext)) {
       return await reader.getText(filepath);
     }
-    // This is not a known binary file type
-    if (isTextFile(buffer)) {
-      return await readTextFile(filepath);
-    }
 
     if (type && ['png', 'jpg', 'jpeg', 'gif'].includes(type.ext)) {
       const imageHandler = new ImageHandler();
@@ -34,6 +30,15 @@ async function readFile(filepath) {
         `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3" alt="image preview" style="max-height: 200px;"></div>`,
       );
 
+      return null;
+    }
+
+    if (isTextFile(buffer)) {
+      chatController.chat.addFrontendMessage(
+        'error',
+        `Don't upload code files directly, instead ask a question and mention file name in the question.`,
+      );
+      console.error(`File was uploaded directly: ${basename}`);
       return null;
     }
 

@@ -1,6 +1,6 @@
 const modelOptions = {
   'gpt-4-turbo': 'GPT-4 Turbo with Vision',
-  'gpt-4-0125-preview': 'GPT-4',
+  'gpt-4': 'GPT-4',
 };
 const defaultModel = 'gpt-4-turbo';
 
