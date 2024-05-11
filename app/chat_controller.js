@@ -203,13 +203,6 @@ class ChatController {
   }
 
   async process(query, renderUserMessage = true, reflectMessage = null) {
-    if (this.isProcessing) {
-      console.error('Already processing');
-      // return;
-    }
-    this.isProcessing = true;
-
-    let messageContent;
     let apiResponseMessage;
     document.getElementById('retry_button').setAttribute('hidden', true);
 
@@ -233,7 +226,14 @@ class ChatController {
       }
     }
 
+    if (this.isProcessing) {
+      console.error('Already processing');
+      this.isProcessing = false;
+      return;
+    }
+
     try {
+      this.isProcessing = true;
       viewController.updateLoadingIndicator(true, 'Waiting for ChatGPT ...');
       const apiMessages = await this.chat.chatContextBuilder.buildMessages(query, reflectMessage);
       const apiResponse = await this.callAPI(apiMessages);

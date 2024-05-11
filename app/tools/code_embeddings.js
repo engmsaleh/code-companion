@@ -29,6 +29,8 @@ const detectedLanguageToSplitterMapping = {
   Solidity: 'sol',
 };
 
+const MAX_FILE_SIZE = 10000;
+
 class CodeEmbeddings {
   constructor(projectName, openAIApiKey) {
     this.projectName = projectName;
@@ -68,7 +70,13 @@ class CodeEmbeddings {
   async updateEmbeddingsForFiles(filesList) {
     if (!this.openAIApiKey || filesList.length === 0) return;
 
-    const filesNeedingReembedding = filesList.filter((filePath) => this.needsReembedding(filePath));
+    const filesNeedingReembedding = (
+      await Promise.all(
+        filesList.map(async (filePath) => {
+          return (await this.needsReembedding(filePath)) ? filePath : null;
+        }),
+      )
+    ).filter((filePath) => filePath !== null);
 
     viewController.updateLoadingIndicator(
       true,
@@ -80,9 +88,11 @@ class CodeEmbeddings {
     this.save();
   }
 
-  needsReembedding(filePath) {
+  async needsReembedding(filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
-    if (!isTextFile(fileContent)) {
+    const stats = await fs.promises.stat(filePath);
+
+    if (!isTextFile(filePath) || stats.size > MAX_FILE_SIZE) {
       return false;
     }
 

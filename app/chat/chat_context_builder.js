@@ -11,7 +11,7 @@ const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 4000;
 const MAX_RELEVANT_FILES_TOKENS = 5000;
-const MAX_FILE_SIZE = 1048576;
+const MAX_FILE_SIZE = 10000;
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -285,7 +285,6 @@ class ChatContextBuilder {
   }
 
   async reduceRelevantFilesContext(fileContents, fileList) {
-    console.log('Current context files are:', fileContents);
     const fileContentTokenCount = this.chat.countTokens(fileContents);
     const lastMessageId = this.chat.backendMessages.length - 1;
     if (
@@ -333,7 +332,7 @@ class ChatContextBuilder {
     try {
       const stats = await fs.promises.stat(filePath);
       if (!isTextFile(filePath) || stats.size > MAX_FILE_SIZE) {
-        console.log(`Skipped file (non-text or too large): ${filePath}`);
+        console.error(`Skipped file (non-text or too large): ${filePath}`);
         return null;
       }
       const content = await fs.promises.readFile(filePath, 'utf8');
