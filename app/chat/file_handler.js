@@ -36,7 +36,7 @@ async function readFile(filepath) {
     if (isTextFile(buffer)) {
       chatController.chat.addFrontendMessage(
         'error',
-        `Don't upload code files directly, instead ask a question and mention file name in the question.`,
+        `Don't upload code files directly. Open project where this file is located, and then ask a question about this file.`,
       );
       console.error(`File was uploaded directly: ${basename}`);
       return null;
