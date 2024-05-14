@@ -11,7 +11,7 @@ const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 4000;
 const MAX_RELEVANT_FILES_TOKENS = 5000;
-const MAX_FILE_SIZE = 20000;
+const MAX_FILE_SIZE = 30000;
 
 class ChatContextBuilder {
   constructor(chat) {

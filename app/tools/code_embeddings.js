@@ -29,7 +29,7 @@ const detectedLanguageToSplitterMapping = {
   Solidity: 'sol',
 };
 
-const MAX_FILE_SIZE = 20000;
+const MAX_FILE_SIZE = 30000;
 
 class CodeEmbeddings {
   constructor(projectName, openAIApiKey) {
