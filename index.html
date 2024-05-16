@@ -30,7 +30,7 @@
           <label class="form-check-label" for="approvalToggle">Require approval</label>
           <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right" title="Require approval for actions that make changes, such as writing files or executing commands."></i>
         </div>
-        <button class="btn shadow-none btn-sm text-decoration-none mx-1 d-none d-md-block" type="button" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+        <button class="btn shadow-none btn-sm text-decoration-none mx-1 d-none d-md-block" type="button" onclick="viewController.showFeedbackModal()">
           Feedback
         </button>
         
@@ -291,10 +291,10 @@
       </div>
     </div>
 
-    <div class="modal" tabindex="-1" id="feedbackModal">
+    <div class="modal" tabindex="-1" id="feedbackModal" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <form action="https://submit-form.com/iStsJP8J">
+          <form id="feedbackForm">
             <div class="modal-header">
               <h5 class="modal-title">Submit feedback</h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -306,7 +306,7 @@
               </div>
             </div>
             <div class="modal-footer">
-              <button type="submit" class="btn btn-primary">Send</button>
+              <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); viewController.submitFeedback()">Send</button>
             </div>
           </form>
         </div>
