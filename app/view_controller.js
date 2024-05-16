@@ -2,6 +2,7 @@ const hljs = require('highlight.js/lib/common');
 const { marked } = require('marked');
 const { markedHighlight } = require('marked-highlight');
 const autosize = require('autosize');
+const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
 
 class ViewController {
   initializeUIFormatting() {
@@ -192,6 +193,29 @@ class ViewController {
   openFileInIDE(filePath) {
     const terminalCommand = `${chatController.settings.commandToOpenFile} "${filePath}"`;
     chatController.terminalSession.executeCommandWithoutOutput(terminalCommand);
+  }
+
+  showFeedbackModal() {
+    feedbackModal.show();
+  }
+
+  submitFeedback() {
+    const form = document.getElementById('feedbackForm');
+    const formData = new FormData(form);
+    fetch('https://submit-form.com/iStsJP8J', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams(formData).toString(),
+    })
+      .then((data) => {
+        form.reset();
+        feedbackModal.hide();
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
   }
 
   showWelcomeContent() {
