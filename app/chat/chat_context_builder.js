@@ -9,8 +9,9 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 4000;
+const MAX_SUMMARY_TOKENS = 10000;
 const MAX_RELEVANT_FILES_TOKENS = 5000;
+const MAX_RELEVANT_FILES_COUNT = 5;
 const MAX_FILE_SIZE = 30000;
 
 class ChatContextBuilder {
@@ -158,6 +159,7 @@ class ChatContextBuilder {
     Compress the messages above. Preserve the meaning, file names, results, order of actions, what was done and what is left.
     Also preserve any important information or code snippets.
     Leave user's messages and plan as is word for word. 
+    For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
     `;
     const summary = await chatController.backgroundTask.run({
       prompt,
@@ -289,7 +291,7 @@ class ChatContextBuilder {
     const lastMessageId = this.chat.backendMessages.length - 1;
     if (
       fileContentTokenCount > MAX_RELEVANT_FILES_TOKENS &&
-      fileList.length > 3 &&
+      fileList.length > MAX_RELEVANT_FILES_COUNT &&
       (lastMessageId - this.reduceRelevantFilesContextMessageId >= 10 || this.reduceRelevantFilesContextMessageId === 0)
     ) {
       this.reduceRelevantFilesContextMessageId = lastMessageId;
