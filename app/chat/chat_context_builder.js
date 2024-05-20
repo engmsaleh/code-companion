@@ -125,7 +125,7 @@ class ChatContextBuilder {
 
     allMessages = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages;
 
-    if (this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS) {
+    if (this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS && this.chat.backendMessages.length > 20) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessages);
       // Update last summarized message ID to the second last message if messages were summarized
       this.lastSummarizedMessageID =

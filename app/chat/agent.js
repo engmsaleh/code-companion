@@ -100,8 +100,9 @@ class Agent {
 
     if (fileInChatContext === false) {
       console.error('Tool rejected', toolCall);
-      console.log('taskRelevantFiles', chatController.chat.chatContextBuilder.taskRelevantFiles);
-      chatController.chat.chatContextBuilder.taskRelevantFiles.push(filePath);
+      if (fileExists) {
+        chatController.chat.chatContextBuilder.taskRelevantFiles.push(filePath);
+      }
     }
 
     return fileInChatContext;
