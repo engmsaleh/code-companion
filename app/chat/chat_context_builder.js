@@ -9,10 +9,11 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 10000;
-const MAX_RELEVANT_FILES_TOKENS = 5000;
+const MAX_SUMMARY_TOKENS = 2000;
+const MAX_RELEVANT_FILES_TOKENS = 7000;
 const MAX_RELEVANT_FILES_COUNT = 5;
 const MAX_FILE_SIZE = 30000;
+const SUMMARIZE_MESSAGES_THRESHOLD = 5;
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -111,13 +112,13 @@ class ChatContextBuilder {
       }
       return message;
     });
-    const messagesToSummarize = preprocessedMessages.slice(0, -1);
+    const messagesToSummarize = preprocessedMessages.slice(0, -SUMMARIZE_MESSAGES_THRESHOLD);
     const notSummarizedMessages = messagesToSummarize
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {
         if (message.content) {
           let content = message.content;
-          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said`}:\n${content}\n`;
+          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `\n"${message.role}" said`}:\n${content}\n`;
         }
         return acc;
       }, '')
@@ -125,7 +126,10 @@ class ChatContextBuilder {
 
     allMessages = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages;
 
-    if (this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS && this.chat.backendMessages.length > 20) {
+    if (
+      this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS &&
+      this.chat.backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD * 2
+    ) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessages);
       // Update last summarized message ID to the second last message if messages were summarized
       this.lastSummarizedMessageID =
@@ -135,14 +139,17 @@ class ChatContextBuilder {
       allMessages = this.pastSummarizedMessages;
     }
 
-    const lastMessage = nonEmptyMessages[nonEmptyMessages.length - 1];
-    if (lastMessage && lastMessage.id > this.lastSummarizedMessageID) {
-      let lastMessageContent = lastMessage.content;
-      allMessages +=
-        `\n${lastMessage.role == 'tool' ? `\n"assistant" ran a tool ${lastMessage.name}` : `"${lastMessage.role}" said`}:\n${lastMessageContent}\n`.trim();
+    const lastNMessages = nonEmptyMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
+    let messagesToAdd = lastNMessages.filter((message) => message.id > this.lastSummarizedMessageID);
+    if (messagesToAdd.length > 0 && messagesToAdd[messagesToAdd.length - 1].role === 'user') {
+      messagesToAdd.pop(); // Remove the last message if it's from a user
     }
+    messagesToAdd.forEach((message) => {
+      let messageContent = message.content;
+      allMessages += `\n\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said`}:\n${messageContent}`;
+    });
 
-    return allMessages
+    return allMessages.trim().length > 0
       ? {
           role: 'system',
           content: `Summary of conversation and what was done: ${allMessages}`,
@@ -160,6 +167,7 @@ class ChatContextBuilder {
     Also preserve any important information or code snippets.
     Leave user's messages and plan as is word for word. 
     For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
+    Summary should be formatted as text with roles and messages separated by new line.
     `;
     const summary = await chatController.backgroundTask.run({
       prompt,
@@ -168,7 +176,7 @@ class ChatContextBuilder {
     });
 
     if (summary) {
-      return summary;
+      return JSON.stringify(summary);
     } else {
       return messages;
     }
@@ -405,7 +413,6 @@ class ChatContextBuilder {
       for (let entry of entries) {
         const entryPath = path.join(dir, entry.name);
         const relativePath = path.join(currentPath, entry.name);
-        if (ig.ignores(relativePath)) continue; // Skip ignored files/dirs
 
         if (entry.isDirectory()) {
           await listFiles(entryPath, allFiles, relativePath);

@@ -68,7 +68,15 @@ class CodeEmbeddings {
   }
 
   async updateEmbeddingsForFiles(filesList) {
-    if (!this.openAIApiKey || filesList.length === 0) return;
+    if (!this.openAIApiKey) {
+      return;
+    }
+
+    if (filesList.length === 0) {
+      this.deleteEmbeddingsForFilesNotInList(filesList);
+      this.save();
+      return;
+    }
 
     const filesNeedingReembedding = (
       await Promise.all(
