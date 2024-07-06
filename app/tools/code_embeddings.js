@@ -217,7 +217,10 @@ ${JSON.stringify(searchResultsWithIndex)}
 
 What array indexes of these search result objects in JSON array above are the most relevant to my search query?
 Respond with JSON array only with actual array indexes in the order of search result relevance. Do not include indexes of tottally irrelevant search results.`;
-      const format = [3, 1, 4];
+      const format = {
+        type: 'array',
+        result: 'Array of indexes',
+      };
 
       const parsedRankings = await chatController.backgroundTask.run({ prompt, format });
       const rankedResults = parsedRankings

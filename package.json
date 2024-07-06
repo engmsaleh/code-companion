@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.24.2",
+  "version": "5.25.0",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -67,6 +67,7 @@
     "afterSign": "scripts/notarize.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
     "@aptabase/electron": "^0.3.1",
     "@electron/notarize": "^2.3.0",
     "@langchain/openai": "^0.0.12",

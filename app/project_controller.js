@@ -160,6 +160,15 @@ class ProjectController {
       return;
     }
 
+    if (!chatController.settings.apiKey) {
+      const embeddingsErrorMessage = `Unable to calculate embeddings. Please add OpenAI API key under settings. Embeddings are required for code search and enable providing relevant source code for better chat context.`;
+      if (chatController.chat.frontendMessages.find((message) => message.content === embeddingsErrorMessage)) {
+        return;
+      }
+      chatController.chat.addFrontendMessage('error', embeddingsErrorMessage);
+      return;
+    }
+
     await this.createEmbeddings();
     const results = this.embeddings.search({
       query,

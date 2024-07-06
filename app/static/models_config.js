@@ -2,6 +2,7 @@ const modelOptions = {
   'gpt-4-turbo': 'GPT-4 Turbo with Vision',
   'gpt-4o': 'GPT-4o',
   'gpt-4': 'GPT-4',
+  'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet',
 };
 const defaultModel = 'gpt-4-turbo';
 

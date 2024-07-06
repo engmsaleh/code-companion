@@ -68,7 +68,12 @@ ${JSON.stringify(searchResultsWithIndex)}
 What array indexes of these search result objects in JSON array above are the most relevant and complete search results that may answer question in my search queries?
 Respond with JSON array only with actual array indexes in the order of relevance, minimize number of items returned but results must be enough to satisfy research.`;
 
-      const rankings = await chatController.backgroundTask.run({ prompt, format: [3, 1, 4] });
+      const format = {
+        type: 'array',
+        result: 'Array of indexes',
+      };
+
+      const rankings = await chatController.backgroundTask.run({ prompt, format });
       const rankedResults = rankings.filter((index) => index in searchResults).map((index) => searchResults[index]);
       return rankedResults;
     } catch (error) {

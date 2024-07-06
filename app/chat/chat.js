@@ -19,7 +19,7 @@ class Chat {
   }
 
   isEmpty() {
-    return this.frontendMessages.filter((message) => message.role === 'user').length === 0 && this.task === null;
+    return this.backendMessages.length === 0;
   }
 
   getNextId() {
@@ -52,9 +52,19 @@ class Chat {
   async createTaskTitle() {
     let taskTitle = '';
 
+    if (this.task.split(' ').length < 4) {
+      this.taskTitle = this.task;
+      return;
+    }
+
+    const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
+    const format = {
+      type: 'string',
+      result: 'Shortened task title',
+    };
+
     try {
-      const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
-      taskTitle = await chatController.backgroundTask.run({ prompt, format: 'text' });
+      taskTitle = await chatController.backgroundTask.run({ prompt, format });
     } catch (error) {
       taskTitle = this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : ''); // Fallback task title
     }
