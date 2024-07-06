@@ -24,7 +24,7 @@ class Agent {
       }
       chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, toolCalls);
 
-      if (toolCalls) {
+      if (toolCalls && toolCalls.length > 0) {
         const { decision, reflectMessage } = await this.runTools(toolCalls);
         this.userDecision = null;
 
@@ -157,17 +157,21 @@ class Agent {
   }
 
   parseArguments(args) {
-    try {
-      return JSON.parse(args);
-    } catch (error) {
-      if (functionCall.name === 'run_shell_command') {
-        return {
-          command: functionCall.arguments,
-        };
-      }
-      console.error(error);
-      throw error;
+    if (typeof args === 'object' && args !== null) {
+      return args;
     }
+
+    if (typeof args === 'string') {
+      try {
+        return JSON.parse(args);
+      } catch (error) {
+        console.warn('Failed to parse arguments:', error);
+        return args; // Return original string if parsing fails
+      }
+    }
+
+    console.warn('Unexpected argument type:', typeof args);
+    return args; // Return original for any other type
   }
 
   showToolCallPreview(toolCall) {

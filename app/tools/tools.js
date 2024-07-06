@@ -217,7 +217,7 @@ async function shell({ command }) {
     commandResult = `(some command output ommitted)...\n${commandResult}`;
   }
   commandResult = commandResult.replace(command, '');
-  commandResult = `Command executed: '${command}'\nOutput:\n'${commandResult ? commandResult : 'Done.'}'`;
+  commandResult = `Command executed: '${command}'\nOutput:\n'${commandResult ? commandResult : 'command executed successfully. Terminal command output was empty.'}'`;
   viewController.updateLoadingIndicator(false);
 
   return commandResult;
@@ -343,7 +343,10 @@ async function searchURL({ query, url }) {
 }
 
 async function checkIfAnswersQuery(query, searchResult) {
-  const format = false;
+  const format = {
+    type: 'boolean',
+    result: 'true or false',
+  };
   const prompt = `
 I am searching web for this query: '${query}'
 Search result is:
@@ -352,11 +355,7 @@ ${JSON.stringify(searchResult)}
 
 Does this result answer search query question?
 Respond with boolean value:  "true" or "false"`;
-  const result = await chatController.backgroundTask.run({
-    prompt,
-    format,
-    // model: chatController.settings.selectedModel,
-  });
+  const result = await chatController.backgroundTask.run({ prompt, format });
 
   return result !== false;
 }
@@ -380,18 +379,23 @@ function respondTargetFileNotProvided() {
   return 'Please provide a target file name in a correct format.';
 }
 
-function formattedTools() {
-  const enabledTools = toolDefinitions.filter((tool) => tool.enabled);
+function getEnabledTools(filterFn) {
+  return toolDefinitions
+    .filter(filterFn)
+    .map(({ name, description, parameters }) => ({ name, description, parameters }));
+}
 
-  return enabledTools.map(({ name, description, parameters }) => ({
-    name,
-    description,
-    parameters,
-  }));
+function allEnabledTools() {
+  return getEnabledTools((tool) => tool.enabled);
+}
+
+function readOnlyTools() {
+  return getEnabledTools((tool) => tool.enabled && !tool.approvalRequired);
 }
 
 module.exports = {
+  allEnabledTools,
+  readOnlyTools,
   toolDefinitions,
-  formattedTools,
   previewMessageMapping,
 };

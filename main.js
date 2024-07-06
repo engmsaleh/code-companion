@@ -1,4 +1,15 @@
-const { app, BrowserWindow, globalShortcut, Menu, MenuItem, ipcMain, dialog, shell, systemPreferences, nativeTheme } = require('electron');
+const {
+  app,
+  BrowserWindow,
+  globalShortcut,
+  Menu,
+  MenuItem,
+  ipcMain,
+  dialog,
+  shell,
+  systemPreferences,
+  nativeTheme,
+} = require('electron');
 
 app.setName('CodeCompanion.AI');
 const { autoUpdater } = require('electron-updater');
@@ -19,7 +30,7 @@ let terminal;
 if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   setTimeout(() => {
     win.webContents.openDevTools();
-  }, 1000);
+  }, 100);
 } else {
   Sentry.init({
     dsn: 'https://87985c08c00b4f0c83989b182e9fbe95@o4505507137847296.ingest.sentry.io/4505507139485696',
@@ -101,7 +112,9 @@ function createWindow() {
               .checkForUpdates()
               .then((updateCheckResult) => {
                 if (updateCheckResult && updateCheckResult.updateAvailable) {
-                  win.webContents.executeJavaScript("viewController.updateFooterMessage('Update available. Downloading...')");
+                  win.webContents.executeJavaScript(
+                    "viewController.updateFooterMessage('Update available. Downloading...')",
+                  );
                 } else {
                   isUpdateInProgress = false;
                   win.webContents.executeJavaScript("viewController.updateFooterMessage('App is up to date')");
@@ -109,7 +122,9 @@ function createWindow() {
               })
               .catch((error) => {
                 console.error(error);
-                win.webContents.executeJavaScript(`viewController.updateFooterMessage('Error occured when updating app. ${error.toString()}')`);
+                win.webContents.executeJavaScript(
+                  `viewController.updateFooterMessage('Error occured when updating app. ${error.toString()}')`,
+                );
               });
           },
         },

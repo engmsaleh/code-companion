@@ -80,8 +80,8 @@ function getSystemInfo() {
   return systemInfo;
 }
 
-function isTextFile(buffer) {
-  return isTextOrBinary.isText(null, buffer);
+function isTextFile(bufferOrFileName) {
+  return isTextOrBinary.isText(bufferOrFileName);
 }
 
 async function normalizedFilePath(targetFile) {
@@ -95,12 +95,23 @@ async function normalizedFilePath(targetFile) {
 
 async function isFileExists(filePath) {
   const normalizedPath = await normalizedFilePath(filePath);
-  return fs.existsSync(normalizedPath);
+  if (fs.existsSync(normalizedPath)) {
+    const stats = fs.statSync(normalizedPath);
+    return stats.size > 0;
+  }
+  return false;
+}
+
+function log(...args) {
+  if (isDevelopment) {
+    console.log(...args);
+  }
 }
 
 module.exports = {
   withTimeout,
   withErrorHandling,
+  log,
   getSystemInfo,
   isTextFile,
   normalizedFilePath,

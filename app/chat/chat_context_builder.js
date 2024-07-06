@@ -9,9 +9,9 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 2000;
-const MAX_RELEVANT_FILES_TOKENS = 7000;
-const MAX_RELEVANT_FILES_COUNT = 5;
+const MAX_SUMMARY_TOKENS = 1000;
+const MAX_RELEVANT_FILES_TOKENS = 10000;
+const MAX_RELEVANT_FILES_COUNT = 10;
 const MAX_FILE_SIZE = 30000;
 const SUMMARIZE_MESSAGES_THRESHOLD = 5;
 
@@ -24,20 +24,27 @@ class ChatContextBuilder {
     this.lastEditedFilesTimestamp = chat.startTimestamp;
     this.taskRelevantFiles = [];
     this.pastSummarizedMessages = '';
+    this.searchRelevantFiles = false;
+    this.taskNeedsPlan = false;
   }
 
   async buildMessages(userMessage, reflectMessage = null) {
     this.backendMessages = this.chat.backendMessages.map((message) => _.omit(message, ['id']));
 
-    return [
-      await this.addSystemMessage(),
-      ...this.addImageMessages(),
-      this.addTaskMessage(),
-      await this.addSummaryOfMessages(),
-      await this.addRelevantSourceCodeMessage(),
-      this.addLastUserMessage(userMessage),
-      this.addReflectMessage(reflectMessage),
-    ].filter((message) => message !== null);
+    return [await this.addSystemMessage(), await this.addUserMessage(userMessage, reflectMessage)];
+  }
+
+  async addUserMessage(userMessage, reflectMessage) {
+    const conversationSummary = await this.addSummaryOfMessages();
+    const lastUserMessage = this.addLastUserMessage(userMessage);
+    const reflectMessageResult = this.addReflectMessage(reflectMessage);
+    const content = [this.addTaskMessage(), conversationSummary, lastUserMessage, reflectMessageResult]
+      .filter(Boolean)
+      .join('\n');
+    return {
+      role: 'user',
+      content,
+    };
   }
 
   addImageMessages() {
@@ -52,8 +59,10 @@ class ChatContextBuilder {
     let systemMessage;
 
     if (this.chat.isEmpty() && (await this.isTaskNeedsPlan())) {
+      this.taskNeedsPlan = true;
       systemMessage = PLAN_PROMPT_TEMPLATE;
     } else {
+      this.taskNeedsPlan = false;
       systemMessage = TASK_EXECUTION_PROMPT_TEMPLATE;
     }
 
@@ -75,12 +84,16 @@ class ChatContextBuilder {
     const prompt = `
     Task:
     "${this.chat.task}"\n
-    Is this user task will need to be brainstormed and planned before execution? Respond false, if this is a simple task that involves only a few commands or one file manipulation.
-    Respond with boolean value:  "true" or "false"`;
+    Is this user task will need to be brainstormed and planned before execution? Respond false, if this is a simple task that involves only a few commands or one file manipulation.`;
+
+    const format = {
+      type: 'boolean',
+      result: 'true or false',
+    };
 
     const result = await chatController.backgroundTask.run({
       prompt,
-      format: false,
+      format,
       model: chatController.settings.selectedModel,
     });
 
@@ -88,10 +101,7 @@ class ChatContextBuilder {
   }
 
   addTaskMessage() {
-    return {
-      role: 'user',
-      content: `Task:\n\n${this.chat.task}`,
-    };
+    return `<task>${this.chat.task}</task>\n`;
   }
 
   addProjectCustomInstructionsMessage() {
@@ -118,7 +128,7 @@ class ChatContextBuilder {
       .reduce((acc, message) => {
         if (message.content) {
           let content = message.content;
-          acc += `\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `\n"${message.role}" said`}:\n${content}\n`;
+          acc += `${message.role == 'tool' ? `<assistant executed_tool="${message.name}">` : `<${message.role}>`}:\n${content}\n</${message.role}>\n\n`;
         }
         return acc;
       }, '')
@@ -146,15 +156,15 @@ class ChatContextBuilder {
     }
     messagesToAdd.forEach((message) => {
       let messageContent = message.content;
-      allMessages += `\n\n${message.role == 'tool' ? `"assistant" ran a tool ${message.name}` : `"${message.role}" said`}:\n${messageContent}`;
+      const role = message.role == 'tool' ? `assistant` : message.role;
+      const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
+      allMessages += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
     });
 
-    return allMessages.trim().length > 0
-      ? {
-          role: 'system',
-          content: `Summary of conversation and what was done: ${allMessages}`,
-        }
-      : null;
+    const summary =
+      allMessages.trim().length > 0 ? `\n<conversation_history>\n${allMessages}\n</conversation_history>` : '';
+    const relevantSourceCodeInformation = await this.relevantSourceCodeInformation();
+    return `${summary}\n\n${relevantSourceCodeInformation}`;
   }
 
   async summarizeMessages(messages) {
@@ -167,11 +177,19 @@ class ChatContextBuilder {
     Also preserve any important information or code snippets.
     Leave user's messages and plan as is word for word. 
     For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
+    Use xml syntax to indicate roles and messages. Example:
+    <user>
+    User message
+    </user>
     Summary should be formatted as text with roles and messages separated by new line.
     `;
+    const format = {
+      type: 'string',
+      result: 'Summary of the conversation',
+    };
     const summary = await chatController.backgroundTask.run({
       prompt,
-      format: 'text',
+      format,
       model: chatController.settings.selectedModel,
     });
 
@@ -182,18 +200,19 @@ class ChatContextBuilder {
     }
   }
 
-  async addRelevantSourceCodeMessage() {
+  async relevantSourceCodeInformation() {
     const projetState = await this.projectStateToText();
     const relevantFilesAndFoldersToUserMessages = await this.getRelevantFilesAndFoldersToUserMessages();
     const relevantFilesContents = await this.getRelevantFilesContents();
 
-    return {
-      role: 'system',
-      content: `${projetState}${relevantFilesAndFoldersToUserMessages}${relevantFilesContents}`,
-    };
+    return `${projetState}${relevantFilesAndFoldersToUserMessages}${relevantFilesContents}`;
   }
 
   async getRelevantFilesAndFoldersToUserMessages() {
+    if (!this.searchRelevantFiles) {
+      return '';
+    }
+
     let lastBackendMessage = this.chat.backendMessages[this.chat.backendMessages.length - 1];
     let lastUserMessage;
     if (!lastBackendMessage) {
@@ -227,7 +246,7 @@ class ChatContextBuilder {
           return `- "${result}"`;
         })
         .join('\n');
-      return `\n\nThese files might be relevant to user's task:\n\n${relevantFilesAndFoldersMessage}`;
+      return `<relevant_files_and_folders>${relevantFilesAndFoldersMessage}</relevant_files_and_folders>\n`;
     }
   }
 
@@ -240,9 +259,7 @@ class ChatContextBuilder {
     let fileContents = await this.getFileContents(relevantFileNames);
     fileContents = await this.reduceRelevantFilesContext(fileContents, relevantFileNames);
 
-    return fileContents
-      ? `\n\nExisting files (recently modified or read by assistant or user. Do not read these files again):\n\n${fileContents}`
-      : '';
+    return fileContents ? `\n\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>` : '';
   }
 
   async getListOfRelevantFiles() {
@@ -265,12 +282,8 @@ class ChatContextBuilder {
       .flatMap((message) =>
         message.tool_calls
           .map((toolCall) => {
-            try {
-              const parsedArguments = JSON.parse(toolCall.function.arguments);
-              return parsedArguments.hasOwnProperty('targetFile') ? parsedArguments.targetFile : undefined;
-            } catch {
-              return undefined;
-            }
+            const parsedArguments = chatController.agent.parseArguments(toolCall.function.arguments);
+            return parsedArguments.hasOwnProperty('targetFile') ? parsedArguments.targetFile : undefined;
           })
           .filter((file) => file !== undefined),
       );
@@ -291,7 +304,9 @@ class ChatContextBuilder {
     const fileReadPromises = fileList.map((file) => this.readFile(file));
     const fileContents = await Promise.all(fileReadPromises);
 
-    return fileList.map((file, index) => `Content for "${file}":\n\n${fileContents[index]}`).join('\n\n');
+    return fileList
+      .map((file, index) => `\n<file_content file="${file}">\n${fileContents[index]}\n</file_content>`)
+      .join('\n\n');
   }
 
   async reduceRelevantFilesContext(fileContents, fileList) {
@@ -329,9 +344,14 @@ class ChatContextBuilder {
     Order files by importance, most important first.
     `;
 
+    const format = {
+      type: 'array',
+      result: 'Array of file paths',
+    };
+
     const result = await chatController.backgroundTask.run({
       prompt,
-      format: ['file1', 'file2', 'file3', '...'],
+      format,
       model: chatController.settings.selectedModel,
     });
 
@@ -355,13 +375,10 @@ class ChatContextBuilder {
 
   addLastUserMessage(userMessage) {
     if (!userMessage) {
-      return null;
+      userMessage = '';
     }
 
-    return {
-      role: 'user',
-      content: userMessage,
-    };
+    return userMessage ? `<user>${userMessage}</user>\n` : '';
   }
 
   addReflectMessage(reflectMessage) {
@@ -369,17 +386,14 @@ class ChatContextBuilder {
       return null;
     }
 
-    return {
-      role: 'user',
-      content: `
+    return `
       "assistant" proposed this change:
       
       ${JSON.stringify(reflectMessage, null, 2)}
       
       This can be improved.
       First step by step explain how code/commamnd can be improved or fixed, what bugs it has, what was not implemented correctly or fully, and what may not work.
-      Then run the same tool but with improved code/command based on your explanation. Only provide code/command in the tool not in message content`,
-    };
+      Then run the same tool but with improved code/command based on your explanation. Only provide code/command in the tool not in message content`;
   }
 
   fromTemplate(content, placeholder, value) {
@@ -391,16 +405,15 @@ class ChatContextBuilder {
     const dirName = path.basename(await chatController.terminalSession.getCurrentDirectory());
 
     let projectStateText = '';
-    projectStateText += `In case this information is helpfull. You are already located in the '${dirName}' directory (don't navigate to or add '${dirName}' to file path). The full path to this directory is '${chatController.agent.currentWorkingDir}'.`;
-
+    projectStateText += `Current directory is '${dirName}'. The full path to this directory is '${chatController.agent.currentWorkingDir}'`;
     if (chatController.agent.projectController.currentProject) {
       const filesInFolder = await withErrorHandling(this.getFolderStructure.bind(this));
       if (filesInFolder) {
-        projectStateText += `\nThe contents of this project directory (excluding files from gitignore): \n${filesInFolder}`;
+        projectStateText += `\nThe contents of this directory (excluding files from gitisgnore): \n${filesInFolder}`;
       }
     }
 
-    return projectStateText;
+    return projectStateText ? `<current_project_state>\n${projectStateText}\n</current_project_state>\n` : '';
   }
 
   async getFolderStructure() {
@@ -427,12 +440,15 @@ class ChatContextBuilder {
       const allFiles = await listFiles(rootDir);
       if (allFiles.length === 0) {
         // If directory is empty
+        this.searchRelevantFiles = false;
         return 'The directory is empty.';
       } else if (allFiles.length <= 30) {
         // If 30 or fewer files, list them all
+        this.searchRelevantFiles = false;
         return allFiles.map((file) => `- ${file}`).join('\n');
       } else {
         // If more than 30 files, only show top-level directories and files
+        this.searchRelevantFiles = true;
         const topLevelEntries = await fs.promises.readdir(rootDir, { withFileTypes: true });
         const filteredTopLevelEntries = topLevelEntries.filter((entry) => !ig.ignores(entry.name));
         const folderStructure = filteredTopLevelEntries
