@@ -80,7 +80,7 @@ class Agent {
 
   async isToolAllowedToExecute(toolCall) {
     // Don't allow code replacement or writing to files if file is not in chat context
-    const toolsToCheck = ['create_or_overwrite_file', 'replace_string_in_file'];
+    const toolsToCheck = ['create_or_overwrite_file', 'replace_code'];
     const toolName = toolCall.function.name;
 
     if (!toolsToCheck.includes(toolName)) {

@@ -29,31 +29,30 @@ const toolDefinitions = [
     approvalRequired: true,
   },
   {
-    name: 'replace_string_in_file',
-    description: 'Replace a string with another string, the rest of the file content will remain the same.',
+    name: 'replace_code',
+    description: 'Replace a portion of a file with new content using line numbers.',
     parameters: {
       type: 'object',
       properties: {
         targetFile: {
           type: 'string',
+          description: 'Path to the file to be modified.',
         },
-        findString: {
-          type: 'string',
-          description:
-            'String or entire code block that exists exactly in the content of the file and need to be replaced. Do not use regex. Must include all leading spaces and match exaclty.',
+        startLineNumber: {
+          type: 'integer',
+          description: 'The line number where the replacement should start (inclusive).',
+        },
+        endLineNumber: {
+          type: 'integer',
+          description: 'The line number where the replacement should end (inclusive).',
         },
         replaceWith: {
           type: 'string',
           description:
-            'New string that will replace findString. Calculate then insert correct identation for each new line of code insterted.',
-        },
-        replaceAll: {
-          type: 'boolean',
-          description:
-            'Indicates if all occurrences of findString should be replaced in the file or one, use "true" - to replace all, false - to replace a single occurrence (more preferred).',
+            'New content to replace the specified lines. Ensure correct indentation for each new line of code inserted.',
         },
       },
-      required: ['targetFile', 'findString', 'replaceWith', 'replaceAll'],
+      required: ['targetFile', 'startLineNumber', 'endLineNumber', 'replaceWith'],
     },
     executeFunction: replaceInFile,
     enabled: true,
@@ -91,18 +90,19 @@ const toolDefinitions = [
   },
   {
     name: 'search',
-    description: 'Semantic search that can perform codebase search or google search',
+    description: 'Semantic search that can perform codebase search or Google search',
     parameters: {
       type: 'object',
       properties: {
         type: {
           type: 'string',
           enum: ['codebase', 'google'],
-          description: 'Type of search to perform',
+          description:
+            'Type of search to perform. Use codebase to search existing code in project with many files. Use Google only to find latest information or when asked by user. Do not use Google to search for best practices, code examples, libraries, etc.',
         },
         query: {
           type: 'string',
-          description: `Descriptive natural language search query`,
+          description: `Long, descriptive natural language search query`,
         },
       },
     },
@@ -132,9 +132,9 @@ const previewMessageMapping = (args) => ({
     message: `Reading a file ${args.targetFile ? args.targetFile : 'No files specified'}`,
     code: '',
   },
-  replace_string_in_file: {
+  replace_code: {
     message: `Updating ${args.targetFile}\n\n`,
-    code: `Replacing:\n\`\`\`\n${args.findString}\n\`\`\`` + `\n\nWith:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
+    code: `Replacing lines ${args.startLineNumber}-${args.endLineNumber}:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
   },
   run_shell_command: {
     message: 'Executing shell command:',
@@ -170,7 +170,7 @@ async function createFile({ targetFile, createText }) {
   return `File '${targetFile}' created successfully`;
 }
 
-async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }) {
+async function replaceInFile({ targetFile, startLineNumber, endLineNumber, replaceWith }) {
   if (!targetFile) {
     return respondTargetFileNotProvided();
   }
@@ -183,30 +183,24 @@ async function replaceInFile({ targetFile, findString, replaceWith, replaceAll }
   }
 
   let content = fs.readFileSync(filePath, 'utf8');
-  const matches = (content.split(findString) || []).length - 1;
-  if (matches === 0) {
-    const findStringNotPresentMessage = `This string '${findString}' is not present in the file`;
-    chatController.chat.addFrontendMessage('function', findStringNotPresentMessage);
+  const lines = content.split('\n');
 
-    return findStringNotPresentMessage;
+  if (startLineNumber < 1 || endLineNumber > lines.length || startLineNumber > endLineNumber) {
+    const invalidRangeMessage = `Invalid line range: ${startLineNumber}-${endLineNumber}`;
+    chatController.chat.addFrontendMessage('function', invalidRangeMessage);
+    return invalidRangeMessage;
   }
 
-  if (replaceAll) {
-    const find = new RegExp(escapeRegExp(findString), 'g');
-    content = content.replace(find, replaceWith);
-  } else {
-    content = content.replace(findString, replaceWith);
-  }
-  fs.writeFileSync(filePath, content);
+  const beforeLines = lines.slice(0, startLineNumber - 1);
+  const afterLines = lines.slice(endLineNumber);
+  const newContent = [...beforeLines, replaceWith, ...afterLines].join('\n');
+
+  fs.writeFileSync(filePath, newContent);
 
   const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
   chatController.chat.addFrontendMessage('function', successMessage);
 
   return `File ${filePath} updated successfully.`;
-}
-
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function readFile({ targetFile }) {
