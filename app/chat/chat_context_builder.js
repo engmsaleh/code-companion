@@ -11,7 +11,7 @@ const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
 const MAX_SUMMARY_TOKENS = 1000;
 const MAX_RELEVANT_FILES_TOKENS = 10000;
-const MAX_RELEVANT_FILES_COUNT = 10;
+const MAX_RELEVANT_FILES_COUNT = 6;
 const MAX_FILE_SIZE = 30000;
 const SUMMARIZE_MESSAGES_THRESHOLD = 4; // Last n message will be left as is
 
@@ -265,7 +265,7 @@ class ChatContextBuilder {
           return `- "${result}"`;
         })
         .join('\n');
-      return `\n<relevant_files_and_folders>\n${relevantFilesAndFoldersMessage}\n</relevant_files_and_folders>\n`;
+      return `These files might or might not be relevant to the task:\n<relevant_files_and_folders>\n${relevantFilesAndFoldersMessage}\n</relevant_files_and_folders>\n`;
     }
   }
 
@@ -279,7 +279,7 @@ class ChatContextBuilder {
     fileContents = await this.reduceRelevantFilesContext(fileContents, relevantFileNames);
 
     return fileContents
-      ? `\n\nCurrent content of the files (no need to read these files again):\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>`
+      ? `\n\nCurrent content of the files (no need to read these files again and dont say thank you for providing these files):\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>`
       : '';
   }
 
@@ -390,11 +390,21 @@ class ChatContextBuilder {
         return null;
       }
       const content = await fs.promises.readFile(filePath, 'utf8');
-      return content;
+      return this.addLineNumbers(content);
     } catch (error) {
       console.error(`Error reading file ${filePath}:`, error);
       return null;
     }
+  }
+
+  addLineNumbers(content) {
+    const lines = content.split('\n');
+    const paddedLines = lines.map((line, index) => {
+      const lineNumber = (index + 1).toString().padStart(4, ' ');
+      return `${lineNumber} | ${line}`;
+    });
+    content = paddedLines.join('\n');
+    return content;
   }
 
   addLastUserMessage(userMessage) {
