@@ -10,14 +10,14 @@ Second, ask user clarifying questiong if user input is needed to create a compre
 
 Third, check libraries that code may be already using that may help, check codebase for code examples and relevant files that might be helpful.
 
-Finally create detailed step by step plan to complete the task using best progrmamming practices.
-
 In the plan just include an overview. Don't provide name of tools, commands or code.
 Lay out the names of the core classes, names of methods (no implementation), and names of libraries, as well as a short comment on their purpose.
 
-Don't name the tools you are using, just call them.
+Don't name the tools you are using.
 
-Finally ask user for confirmation, and once user confirms then call "task_planning_done" to enable execution of the task.`;
+Then ask user for confirmation.
+
+IMPORTANT: Finally call "task_planning_done" to start execution of the task and indicate that plan is done.`;
 
 const TASK_EXECUTION_PROMPT_TEMPLATE = `You are a super smart AI coding assistant with direct {shellType} terminal access and the ability to run any shell commands and write code. The user will give you a task to complete.
 Think step by step until the entire task has been completed.

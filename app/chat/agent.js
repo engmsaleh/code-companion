@@ -10,6 +10,7 @@ class Agent {
     this.projectState = {};
     this.projectController = new ProjectController();
     this.userDecision = null;
+    this.lastToolCall = null;
   }
 
   async runAgent(apiResponseMessage) {
@@ -48,7 +49,8 @@ class Agent {
       }
 
       this.showToolCallPreview(toolCall);
-      const decision = await this.waitForDecision(functionName);
+      const decision = await this.waitForDecision(functionName, toolCall);
+      this.lastToolCall = toolCall;
 
       if (decision === 'approve') {
         const functionCallResult = await this.callFunction(toolCall);
@@ -108,11 +110,12 @@ class Agent {
     return fileInChatContext;
   }
 
-  async waitForDecision(functionName) {
+  async waitForDecision(functionName, toolCall) {
     this.userDecision = null;
     if (
-      chatController.settings.approvalRequired &&
-      toolDefinitions.find((tool) => tool.name === functionName).approvalRequired
+      this.isToolCallRepeated(toolCall) ||
+      (chatController.settings.approvalRequired &&
+        toolDefinitions.find((tool) => tool.name === functionName).approvalRequired)
     ) {
       document.getElementById('messageInput').disabled = true;
       document.getElementById('approval_buttons').removeAttribute('hidden');
@@ -131,6 +134,11 @@ class Agent {
     } else {
       return Promise.resolve('approve');
     }
+  }
+
+  isToolCallRepeated(toolCall) {
+    if (!this.lastToolCall) return false;
+    return JSON.stringify(toolCall) === JSON.stringify(this.lastToolCall);
   }
 
   async callFunction(toolCall) {

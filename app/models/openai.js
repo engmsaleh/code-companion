@@ -48,7 +48,7 @@ class OpenAIModel {
     log('Raw response', chatCompletion);
     return {
       content: chatCompletion.choices[0].message.content,
-      tool_calls: chatCompletion.choices[0].message.tool_calls,
+      tool_calls: this.formattedToolCalls(chatCompletion.choices[0].message.tool_calls),
       token_count: 0,
     };
   }
@@ -64,6 +64,18 @@ class OpenAIModel {
       content: result,
       token_count: 0,
     };
+  }
+
+  formattedToolCalls(tool_calls) {
+    if (!tool_calls) return null;
+    return tool_calls.map((item) => {
+      return {
+        function: {
+          name: item.function.name,
+          arguments: item.function.arguments,
+        },
+      };
+    });
   }
 
   openAiToolFormat(tool) {
