@@ -170,7 +170,7 @@ class ProjectController {
     }
 
     await this.createEmbeddings();
-    const results = this.embeddings.search({
+    const results = await this.embeddings.search({
       query,
       limit: count,
       basePath: this.currentProject.path,

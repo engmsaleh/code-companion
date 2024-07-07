@@ -114,7 +114,8 @@ class CodeEmbeddings {
   async updateEmbedding(filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf-8');
 
-    if (!isTextFile(fileContent)) {
+    if (!isTextFile(filePath)) {
+      console.log('skipping embedding for', filePath);
       return;
     }
 
@@ -210,8 +211,8 @@ class CodeEmbeddings {
         return { index: index, filePath: result.filePath, fileContent: result.fileContent };
       });
 
-      const prompt = `Codebase search query: \n${query}\n
-All search results:
+      const prompt = `Codebase search query: "${query}"\n
+Codebase snippets search results:
 
 ${JSON.stringify(searchResultsWithIndex)}
 
@@ -219,7 +220,10 @@ What array indexes of these search result objects in JSON array above are the mo
 Respond with JSON array only with actual array indexes in the order of search result relevance. Do not include indexes of tottally irrelevant search results.`;
       const format = {
         type: 'array',
-        result: 'Array of indexes',
+        description: 'Array of indexes representing the most relevant search results',
+        items: {
+          type: 'integer',
+        },
       };
 
       const parsedRankings = await chatController.backgroundTask.run({ prompt, format });

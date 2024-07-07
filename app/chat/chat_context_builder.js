@@ -13,7 +13,7 @@ const MAX_SUMMARY_TOKENS = 1000;
 const MAX_RELEVANT_FILES_TOKENS = 10000;
 const MAX_RELEVANT_FILES_COUNT = 10;
 const MAX_FILE_SIZE = 30000;
-const SUMMARIZE_MESSAGES_THRESHOLD = 5;
+const SUMMARIZE_MESSAGES_THRESHOLD = 4; // Last n message will be left as is
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -58,7 +58,7 @@ class ChatContextBuilder {
   async addSystemMessage() {
     let systemMessage;
 
-    if (this.chat.isEmpty() && (await this.isTaskNeedsPlan())) {
+    if (this.taskNeedsPlan || (this.chat.isEmpty() && (await this.isTaskNeedsPlan()))) {
       this.taskNeedsPlan = true;
       systemMessage = PLAN_PROMPT_TEMPLATE;
     } else {
@@ -127,8 +127,10 @@ class ChatContextBuilder {
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {
         if (message.content) {
-          let content = message.content;
-          acc += `${message.role == 'tool' ? `<assistant executed_tool="${message.name}">` : `<${message.role}>`}:\n${content}\n</${message.role}>\n\n`;
+          let messageContent = message.content;
+          const role = message.role == 'tool' ? `assistant` : message.role;
+          const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
+          acc += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
         }
         return acc;
       }, '')
@@ -169,19 +171,26 @@ class ChatContextBuilder {
 
   async summarizeMessages(messages) {
     const prompt = `
-    Task:
+    <task>
     ${this.chat.task}
-    Messages:
+    </task>
+    <messages>
     ${messages}\n
-    Compress the messages above. Preserve the meaning, file names, results, order of actions, what was done and what is left.
+    </messages>
+    <instructions>
+    Compress the messages above in <messages> section. Preserve the meaning, file names, results, order of actions, what was done and what is left.
     Also preserve any important information or code snippets.
-    Leave user's messages and plan as is word for word. 
+    Leave user's messages and task plan as is word for word. 
     For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
-    Use xml syntax to indicate roles and messages. Example:
+    Use xml syntax to indicate roles and messages and task plan. Example:
+    <task_plan>
+    Plan
+    </task_plan>
     <user>
     User message
     </user>
     Summary should be formatted as text with roles and messages separated by new line.
+    </instructions>
     `;
     const format = {
       type: 'string',
@@ -346,7 +355,10 @@ class ChatContextBuilder {
 
     const format = {
       type: 'array',
-      result: 'Array of file paths',
+      description: 'Array of relevant file paths',
+      items: {
+        type: 'string',
+      },
     };
 
     const result = await chatController.backgroundTask.run({

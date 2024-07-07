@@ -110,6 +110,17 @@ const toolDefinitions = [
     enabled: true,
     requiresApproval: false,
   },
+  {
+    name: 'task_planning_done',
+    description: 'Indicate that task planning is done and ready to start implementation',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+    executeFunction: taskPlanningDone,
+    enabled: false,
+    requiresApproval: false,
+  },
 ];
 
 const previewMessageMapping = (args) => ({
@@ -133,7 +144,16 @@ const previewMessageMapping = (args) => ({
     message: `Searching ${args.type} for '${args.query}'`,
     code: '',
   },
+  task_planning_done: {
+    message: 'Task planning is done.',
+    code: '',
+  },
 });
+
+function taskPlanningDone() {
+  chatController.chat.chatContextBuilder.taskNeedsPlan = false;
+  return 'Task planning is done.';
+}
 
 async function createFile({ targetFile, createText }) {
   if (!targetFile) {
@@ -209,12 +229,16 @@ async function readFile({ targetFile }) {
 async function shell({ command }) {
   viewController.updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
   let commandResult = await chatController.terminalSession.executeShellCommand(command);
-  // get last 20 lines of the terminal output to reduce token usage
+  // Preserve first 5 lines and last 95 lines if more than 100 lines
   const lines = commandResult.split('\n');
-  if (lines.length > 100 || commandResult.length > 5000) {
-    commandResult = lines.slice(-100).join('\n');
+  if (lines.length > 100) {
+    const firstFive = lines.slice(0, 5);
+    const lastNinetyFive = lines.slice(-95);
+    commandResult = [...firstFive, '(some command output omitted)...', ...lastNinetyFive].join('\n');
+  }
+  if (commandResult.length > 5000) {
     commandResult = commandResult.substring(commandResult.length - 5000);
-    commandResult = `(some command output ommitted)...\n${commandResult}`;
+    commandResult = `(some command output omitted)...\n${commandResult}`;
   }
   commandResult = commandResult.replace(command, '');
   commandResult = `Command executed: '${command}'\nOutput:\n'${commandResult ? commandResult : 'command executed successfully. Terminal command output was empty.'}'`;
@@ -389,13 +413,21 @@ function allEnabledTools() {
   return getEnabledTools((tool) => tool.enabled);
 }
 
-function readOnlyTools() {
-  return getEnabledTools((tool) => tool.enabled && !tool.approvalRequired);
+function planningTools() {
+  const tools = getEnabledTools((tool) => tool.enabled && !tool.approvalRequired);
+  const taskPlanningDoneTool = toolDefinitions.find((tool) => tool.name === 'task_planning_done');
+  tools.push({
+    name: taskPlanningDoneTool.name,
+    description: taskPlanningDoneTool.description,
+    parameters: taskPlanningDoneTool.parameters,
+  });
+
+  return tools;
 }
 
 module.exports = {
   allEnabledTools,
-  readOnlyTools,
+  planningTools,
   toolDefinitions,
   previewMessageMapping,
 };
