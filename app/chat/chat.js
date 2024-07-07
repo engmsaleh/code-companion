@@ -79,6 +79,10 @@ class Chat {
     return userMessages[userMessages.length - 1]?.content;
   }
 
+  countOfUserMessages() {
+    return this.frontendMessages.filter((message) => message.role === 'user').length;
+  }
+
   addFrontendMessage(role, content) {
     const message = {
       id: this.getNextId(),

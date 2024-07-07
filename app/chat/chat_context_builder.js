@@ -38,7 +38,14 @@ class ChatContextBuilder {
     const conversationSummary = await this.addSummaryOfMessages();
     const lastUserMessage = this.addLastUserMessage(userMessage);
     const reflectMessageResult = this.addReflectMessage(reflectMessage);
-    const content = [this.addTaskMessage(), conversationSummary, lastUserMessage, reflectMessageResult]
+    const relevantSourceCodeInformation = await this.relevantSourceCodeInformation();
+    const content = [
+      this.addTaskMessage(),
+      conversationSummary,
+      lastUserMessage,
+      relevantSourceCodeInformation,
+      reflectMessageResult,
+    ]
       .filter(Boolean)
       .join('\n');
     return {
@@ -58,7 +65,10 @@ class ChatContextBuilder {
   async addSystemMessage() {
     let systemMessage;
 
-    if (this.taskNeedsPlan || (this.chat.isEmpty() && (await this.isTaskNeedsPlan()))) {
+    if (
+      (this.taskNeedsPlan && this.chat.countOfUserMessages() === 0) ||
+      (this.chat.isEmpty() && (await this.isTaskNeedsPlan()))
+    ) {
       this.taskNeedsPlan = true;
       systemMessage = PLAN_PROMPT_TEMPLATE;
     } else {
@@ -101,7 +111,7 @@ class ChatContextBuilder {
   }
 
   addTaskMessage() {
-    return `<task>${this.chat.task}</task>\n`;
+    return `<task>\n${this.chat.task}\n</task>\n`;
   }
 
   addProjectCustomInstructionsMessage() {
@@ -165,8 +175,8 @@ class ChatContextBuilder {
 
     const summary =
       allMessages.trim().length > 0 ? `\n<conversation_history>\n${allMessages}\n</conversation_history>` : '';
-    const relevantSourceCodeInformation = await this.relevantSourceCodeInformation();
-    return `${summary}\n\n${relevantSourceCodeInformation}`;
+
+    return summary;
   }
 
   async summarizeMessages(messages) {
@@ -233,7 +243,7 @@ class ChatContextBuilder {
     }
 
     if (!lastUserMessage) {
-      return;
+      return '';
     }
 
     const params = {
@@ -255,7 +265,7 @@ class ChatContextBuilder {
           return `- "${result}"`;
         })
         .join('\n');
-      return `<relevant_files_and_folders>${relevantFilesAndFoldersMessage}</relevant_files_and_folders>\n`;
+      return `\n<relevant_files_and_folders>\n${relevantFilesAndFoldersMessage}\n</relevant_files_and_folders>\n`;
     }
   }
 
@@ -268,7 +278,9 @@ class ChatContextBuilder {
     let fileContents = await this.getFileContents(relevantFileNames);
     fileContents = await this.reduceRelevantFilesContext(fileContents, relevantFileNames);
 
-    return fileContents ? `\n\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>` : '';
+    return fileContents
+      ? `\n\nCurrent content of the files (no need to read these files again):\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>`
+      : '';
   }
 
   async getListOfRelevantFiles() {
@@ -421,11 +433,11 @@ class ChatContextBuilder {
     if (chatController.agent.projectController.currentProject) {
       const filesInFolder = await withErrorHandling(this.getFolderStructure.bind(this));
       if (filesInFolder) {
-        projectStateText += `\nThe contents of this directory (excluding files from gitisgnore): \n${filesInFolder}`;
+        projectStateText += `\nThe contents of this directory (excluding files from .gitignore): \n${filesInFolder}`;
       }
     }
 
-    return projectStateText ? `<current_project_state>\n${projectStateText}\n</current_project_state>\n` : '';
+    return projectStateText ? `\n<current_project_state>\n${projectStateText}\n</current_project_state>\n` : '';
   }
 
   async getFolderStructure() {
