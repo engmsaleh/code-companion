@@ -11,7 +11,7 @@ const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
 const AnthropicModel = require('./models/anthropic');
 const { defaultModel } = require('./static/models_config');
-const { allEnabledTools, readOnlyTools } = require('./tools/tools');
+const { allEnabledTools, planningTools } = require('./tools/tools');
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
@@ -168,7 +168,7 @@ class ChatController {
       this.isProcessing = true;
       viewController.updateLoadingIndicator(true, '');
       const messages = await this.chat.chatContextBuilder.buildMessages(query, reflectMessage);
-      const tools = this.chat.chatContextBuilder.taskNeedsPlan ? readOnlyTools() : allEnabledTools();
+      const tools = this.chat.chatContextBuilder.taskNeedsPlan ? planningTools() : allEnabledTools();
       apiResponse = await this.model.call({ messages, model: this.settings.selectedModel, tools });
     } catch (error) {
       this.handleError(error);

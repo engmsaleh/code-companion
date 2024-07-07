@@ -6,7 +6,7 @@ const modelOptions = {
 };
 const defaultModel = 'gpt-4-turbo';
 
-const EMBEDDINGS_VERSION = 'v1.6'; // when reindexing of code embedding is needed, update this version
+const EMBEDDINGS_VERSION = 'v1.8'; // when reindexing of code embedding is needed, update this version
 const EMBEDDINGS_MODEL_NAME = 'text-embedding-ada-002';
 
 module.exports = {

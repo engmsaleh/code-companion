@@ -184,7 +184,7 @@ class TerminalSession {
 
   getTerminalOutput(command) {
     const buffer = this.terminal.buffer.active;
-    const startLine = Math.max(buffer.length - 100, 0);
+    const startLine = Math.max(buffer.length - 200, 0);
     let lines = [];
     let commandLine = 0;
     let lineNumber = 0;

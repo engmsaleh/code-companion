@@ -70,7 +70,10 @@ Respond with JSON array only with actual array indexes in the order of relevance
 
       const format = {
         type: 'array',
-        result: 'Array of indexes',
+        description: 'Array of indexes representing the most relevant search results',
+        items: {
+          type: 'integer',
+        },
       };
 
       const rankings = await chatController.backgroundTask.run({ prompt, format });
