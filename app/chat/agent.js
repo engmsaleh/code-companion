@@ -1,7 +1,7 @@
 const fs = require('graceful-fs');
 const path = require('path');
 const ProjectController = require('../project_controller');
-const { toolDefinitions, previewMessageMapping } = require('../tools/tools');
+const { toolDefinitions, previewMessageMapping, getCodeToReplace } = require('../tools/tools');
 const { isFileExists, normalizedFilePath } = require('../utils');
 
 class Agent {
@@ -48,7 +48,7 @@ class Agent {
         continue;
       }
 
-      this.showToolCallPreview(toolCall);
+      await this.showToolCallPreview(toolCall);
       const decision = await this.waitForDecision(functionName, toolCall);
       this.lastToolCall = toolCall;
 
@@ -182,10 +182,10 @@ class Agent {
     return args; // Return original for any other type
   }
 
-  showToolCallPreview(toolCall) {
+  async showToolCallPreview(toolCall) {
     const functionName = toolCall.function.name;
     const args = this.parseArguments(toolCall.function.arguments);
-    const preview = previewMessageMapping(args)[functionName];
+    const preview = await previewMessageMapping(functionName, args);
 
     chatController.chat.addFrontendMessage('assistant', `${preview.message}\n${preview.code}`);
   }
