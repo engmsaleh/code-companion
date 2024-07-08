@@ -123,32 +123,40 @@ const toolDefinitions = [
   },
 ];
 
-const previewMessageMapping = (args) => ({
-  create_or_overwrite_file: {
-    message: `Creating a file ${args.targetFile}`,
-    code: `\`\`\`\n${args.createText}\n\`\`\``,
-  },
-  read_file: {
-    message: `Reading a file ${args.targetFile ? args.targetFile : 'No files specified'}`,
-    code: '',
-  },
-  replace_code: {
-    message: `Updating ${args.targetFile}\n\n`,
-    code: `Replacing lines ${args.startLineNumber}-${args.endLineNumber}:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
-  },
-  run_shell_command: {
-    message: 'Executing shell command:',
-    code: `\n\n\`\`\`console\n${args.command}\n\`\`\``,
-  },
-  search: {
-    message: `Searching ${args.type} for '${args.query}'`,
-    code: '',
-  },
-  task_planning_done: {
-    message: 'Task planning is done.',
-    code: '',
-  },
-});
+async function previewMessageMapping(functionName, args) {
+  let codeToReplace = '';
+  if (functionName === 'replace_code') {
+    codeToReplace = await getCodeToReplace(args);
+  }
+
+  const mapping = {
+    create_or_overwrite_file: {
+      message: `Creating a file ${args.targetFile}`,
+      code: `\`\`\`\n${args.createText}\n\`\`\``,
+    },
+    read_file: {
+      message: `Reading a file ${args.targetFile ? args.targetFile : 'No files specified'}`,
+      code: '',
+    },
+    replace_code: {
+      message: `Updating ${args.targetFile}\n\n`,
+      code: `Replacing code:\n\`\`\`\n${codeToReplace}\n\`\`\`\n\nWith:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
+    },
+    run_shell_command: {
+      message: 'Executing shell command:',
+      code: `\n\n\`\`\`console\n${args.command}\n\`\`\``,
+    },
+    search: {
+      message: `Searching ${args.type} for '${args.query}'`,
+      code: '',
+    },
+    task_planning_done: {
+      message: 'Task planning is done.',
+      code: '',
+    },
+  };
+  return mapping[functionName];
+}
 
 function taskPlanningDone() {
   chatController.chat.chatContextBuilder.taskNeedsPlan = false;
@@ -201,6 +209,18 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
   chatController.chat.addFrontendMessage('function', successMessage);
 
   return `File ${filePath} updated successfully.`;
+}
+
+async function getCodeToReplace({ targetFile, startLineNumber, endLineNumber }) {
+  const filePath = await normalizedFilePath(targetFile);
+  if (!fs.existsSync(filePath)) {
+    const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
+    chatController.chat.addFrontendMessage('function', doesntExistMessage);
+    return doesntExistMessage;
+  }
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.split('\n');
+  return lines.slice(startLineNumber - 1, endLineNumber).join('\n');
 }
 
 async function readFile({ targetFile }) {
@@ -424,4 +444,5 @@ module.exports = {
   planningTools,
   toolDefinitions,
   previewMessageMapping,
+  getCodeToReplace,
 };
