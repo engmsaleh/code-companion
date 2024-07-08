@@ -1,5 +1,4 @@
 const fileType = require('file-type').fromBuffer;
-const readChunkSync = require('read-chunk').sync;
 const reader = require('any-text');
 const { isTextFile } = require('../utils');
 const ImageHandler = require('./image_handler');
@@ -7,8 +6,7 @@ const ImageHandler = require('./image_handler');
 async function readFile(filepath) {
   try {
     const basename = path.basename(filepath);
-    const buffer = readChunkSync(filepath, 0, 4100);
-    const type = await fileType(buffer);
+    const type = await fileType(filepath);
     if (type && ['docx', 'doc', 'xlsx', 'xls', 'txt', 'csv', 'json'].includes(type.ext)) {
       return await reader.getText(filepath);
     }
@@ -33,7 +31,7 @@ async function readFile(filepath) {
       return null;
     }
 
-    if (isTextFile(buffer)) {
+    if (isTextFile(filepath)) {
       chatController.chat.addFrontendMessage(
         'error',
         `Don't upload code files directly. Open project where this file is located, and then ask a question about this file.`,
