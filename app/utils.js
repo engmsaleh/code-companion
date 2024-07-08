@@ -1,4 +1,5 @@
 const isTextOrBinary = require('istextorbinary');
+const readChunkSync = require('read-chunk').sync;
 
 async function withTimeout(promise, ms) {
   const timeout = new Promise((_, reject) =>
@@ -80,8 +81,9 @@ function getSystemInfo() {
   return systemInfo;
 }
 
-function isTextFile(bufferOrFileName) {
-  return isTextOrBinary.isText(bufferOrFileName);
+function isTextFile(fileName) {
+  const buffer = readChunkSync(fileName, 0, 4100);
+  return isTextOrBinary.isText(fileName, buffer);
 }
 
 async function normalizedFilePath(targetFile) {

@@ -472,14 +472,15 @@ class ChatContextBuilder {
 
     try {
       const allFiles = await listFiles(rootDir);
+      const filesExcludingIgnored = allFiles.filter((file) => !ig.ignores(file));
+
       if (allFiles.length === 0) {
         // If directory is empty
         this.searchRelevantFiles = false;
         return 'The directory is empty.';
-      } else if (allFiles.length <= 30) {
-        // If 30 or fewer files, list them all
+      } else if (filesExcludingIgnored.length <= 30) {
         this.searchRelevantFiles = false;
-        return allFiles.map((file) => `- ${file}`).join('\n');
+        return filesExcludingIgnored.map((file) => `- ${file}`).join('\n');
       } else {
         // If more than 30 files, only show top-level directories and files
         this.searchRelevantFiles = true;
