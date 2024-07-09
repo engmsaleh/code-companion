@@ -124,7 +124,7 @@ class ChatContextBuilder {
   }
 
   async addSummaryOfMessages() {
-    let allMessages = '';
+    let allMessagesText = '';
     const nonEmptyMessages = this.chat.backendMessages.filter((message) => message.content);
     const preprocessedMessages = nonEmptyMessages.map((message) => {
       if (Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url')) {
@@ -133,6 +133,7 @@ class ChatContextBuilder {
       return message;
     });
     const messagesToSummarize = preprocessedMessages.slice(0, -SUMMARIZE_MESSAGES_THRESHOLD);
+    let lastSummarizedId = this.lastSummarizedMessageID;
     const notSummarizedMessages = messagesToSummarize
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {
@@ -141,24 +142,21 @@ class ChatContextBuilder {
           const role = message.role == 'tool' ? `assistant` : message.role;
           const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
           acc += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
+          lastSummarizedId = message.id;
         }
         return acc;
       }, '')
       .trim();
 
-    allMessages = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages;
+    allMessagesText = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages; // up to -SUMMARIZE_MESSAGES_THRESHOLD
 
     if (
-      this.chat.countTokens(allMessages) > MAX_SUMMARY_TOKENS &&
-      this.chat.backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD * 2
+      this.chat.countTokens(allMessagesText) > MAX_SUMMARY_TOKENS &&
+      nonEmptyMessages.length > SUMMARIZE_MESSAGES_THRESHOLD
     ) {
-      this.pastSummarizedMessages = await this.summarizeMessages(allMessages);
-      // Update last summarized message ID to the second last message if messages were summarized
-      this.lastSummarizedMessageID =
-        messagesToSummarize.length > 0
-          ? messagesToSummarize[messagesToSummarize.length - 1].id
-          : this.lastSummarizedMessageID;
-      allMessages = this.pastSummarizedMessages;
+      this.pastSummarizedMessages = await this.summarizeMessages(allMessagesText);
+      this.lastSummarizedMessageID = lastSummarizedId;
+      allMessagesText = this.pastSummarizedMessages;
     }
 
     const lastNMessages = nonEmptyMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
@@ -170,11 +168,20 @@ class ChatContextBuilder {
       let messageContent = message.content;
       const role = message.role == 'tool' ? `assistant` : message.role;
       const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
-      allMessages += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
+      if (message.role == 'tool' && message.name == 'replace_code') {
+        const matchingFrontEndMessage = this.chat.frontendMessages.find(
+          (frontendMessage) => frontendMessage.id === message.id - 2,
+        );
+        if (matchingFrontEndMessage) {
+          const diff = matchingFrontEndMessage.content.match(/```diff\n([\s\S]*?)```/)?.[1] || '';
+          messageContent = diff ? `${diff}\n${messageContent}` : messageContent;
+        }
+      }
+      allMessagesText += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
     });
 
     const summary =
-      allMessages.trim().length > 0 ? `\n<conversation_history>\n${allMessages}\n</conversation_history>` : '';
+      allMessagesText.trim().length > 0 ? `\n<conversation_history>\n${allMessagesText}\n</conversation_history>` : '';
 
     return summary;
   }
@@ -188,8 +195,10 @@ class ChatContextBuilder {
     ${messages}\n
     </messages>
     <instructions>
-    Compress the messages above in <messages> section. Preserve the meaning, file names, results, order of actions, what was done and what is left.
-    Also preserve any important information or code snippets.
+    Compress the message histor above in <messages> section.
+    <task> is provided for your reference only so you understand what information is the the most relevant. Don't include task in the summary.
+    Preserve the meaning, file names, results, order of actions, what was done and what is left.
+    Also preserve any important information or code snippets. 
     Leave user's messages and task plan as is word for word. 
     For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
     Use xml syntax to indicate roles and messages and task plan. Example:
@@ -200,6 +209,7 @@ class ChatContextBuilder {
     User message
     </user>
     Summary should be formatted as text with roles and messages separated by new line.
+    Make sure to remove any duplicate information.
     </instructions>
     `;
     const format = {
@@ -213,7 +223,8 @@ class ChatContextBuilder {
     });
 
     if (summary) {
-      return JSON.stringify(summary);
+      console.log('Summarized message history:', summary);
+      return summary;
     } else {
       return messages;
     }
