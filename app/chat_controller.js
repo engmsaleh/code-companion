@@ -51,6 +51,8 @@ class ChatController {
     let apiKey;
     let AIModel;
 
+    this.model = null;
+
     if (!this.settings.selectedModel.toLowerCase().includes('claude')) {
       apiKey = this.settings.apiKey;
       AIModel = OpenAIModel;

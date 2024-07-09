@@ -3,6 +3,7 @@ const modelOptions = {
   'gpt-4o': 'GPT-4o',
   'gpt-4': 'GPT-4',
   'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet',
+  'claude-3-opus-20240229': 'Claude 3 Opus',
 };
 const defaultModel = 'gpt-4-turbo';
 

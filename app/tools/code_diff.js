@@ -2,6 +2,12 @@ const { Diff2HtmlUI } = require('diff2html/lib/ui/js/diff2html-ui');
 const diff = require('diff');
 
 function generateDiff(oldContent, newContent, oldFileName, newFileName) {
+  if (!oldContent.endsWith('\n')) {
+    oldContent += '\n';
+  }
+  if (!newContent.endsWith('\n')) {
+    newContent += '\n';
+  }
   const patch = diff.createTwoFilesPatch(oldFileName, newFileName, oldContent, newContent);
   return patch;
 }
