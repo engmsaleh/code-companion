@@ -2,29 +2,44 @@ const hljs = require('highlight.js/lib/common');
 const { marked } = require('marked');
 const { markedHighlight } = require('marked-highlight');
 const autosize = require('autosize');
+const { drawDiff } = require('./tools/code_diff');
 const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
 
 class ViewController {
   initializeUIFormatting() {
+    const renderer = new marked.Renderer();
+
+    // Override the code method of the renderer
+    renderer.code = function (code, language) {
+      if (language && language === 'diff') {
+        const diffContainer = document.createElement('div');
+        diffContainer.className = 'diff-container';
+        drawDiff(diffContainer, code);
+        return diffContainer.outerHTML;
+      }
+      if (language && hljs.getLanguage(language)) {
+        return `<pre class="hljs ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
+      }
+      return `<pre class="hljs"><code>${hljs.highlightAuto(code).value}</code></pre>`;
+    };
+
+    // Set options for marked
     marked.setOptions({
-      renderer: new marked.Renderer(),
+      renderer: renderer, // Use the custom renderer
+      highlight: function (code, language) {
+        if (language && hljs.getLanguage(language)) {
+          return hljs.highlight(code, { language }).value;
+        }
+        return hljs.highlightAuto(code).value;
+      },
+      langPrefix: 'language-',
       pedantic: false,
       gfm: true,
       breaks: true,
       smartypants: false,
       xhtml: false,
     });
-    marked.use(
-      markedHighlight({
-        langPrefix: 'language-',
-        highlight(code, language) {
-          if (hljs.getLanguage(language)) {
-            return hljs.highlight(code, { language }).value;
-          }
-          return hljs.highlightAuto(code).value;
-        },
-      }),
-    );
+
     const messageInput = document.getElementById('messageInput');
     autosize(messageInput);
   }
@@ -80,7 +95,6 @@ class ViewController {
   addCopyCodeButtons() {
     const blocks = document.querySelectorAll('pre');
     blocks.forEach((block) => {
-      block.classList.add('hljs');
       if (navigator.clipboard) {
         const button = document.createElement('button');
         button.classList.add('btn', 'btn-sm', 'position-absolute');

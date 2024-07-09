@@ -6,6 +6,7 @@ const axios = require('axios');
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
 const { normalizedFilePath } = require('../utils');
+const { generateDiff } = require('./code_diff');
 
 const toolDefinitions = [
   {
@@ -125,22 +126,38 @@ const toolDefinitions = [
 
 async function previewMessageMapping(functionName, args) {
   let codeToReplace = '';
+  let codeDiff = '';
+  let fileLink = '';
+
+  if (functionName === 'create_or_overwrite_file') {
+    const newFile = await normalizedFilePath(args.targetFile);
+    if (fs.existsSync(newFile)) {
+      const oldContent = fs.readFileSync(newFile, 'utf8');
+      codeDiff = generateDiff(oldContent, args.createText, newFile, newFile);
+    }
+  }
+
   if (functionName === 'replace_code') {
     codeToReplace = await getCodeToReplace(args);
+    codeDiff = generateDiff(codeToReplace, args.replaceWith, args.targetFile, args.targetFile);
+  }
+
+  if (args.targetFile) {
+    fileLink = await openFileLink(args.targetFile);
   }
 
   const mapping = {
     create_or_overwrite_file: {
-      message: `Creating a file ${args.targetFile}`,
-      code: `\`\`\`\n${args.createText}\n\`\`\``,
+      message: `Creating a file ${fileLink}`,
+      code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {
-      message: `Reading a file ${args.targetFile ? args.targetFile : 'No files specified'}`,
+      message: `Reading a file ${fileLink}`,
       code: '',
     },
     replace_code: {
-      message: `Updating ${args.targetFile}\n\n`,
-      code: `Replacing code:\n\`\`\`\n${codeToReplace}\n\`\`\`\n\nWith:\n\`\`\`\n${args.replaceWith}\n\`\`\``,
+      message: `Updating code in ${fileLink}:`,
+      code: `\n\`\`\`diff\n${codeDiff}\n\`\`\``,
     },
     run_shell_command: {
       message: 'Executing shell command:',
