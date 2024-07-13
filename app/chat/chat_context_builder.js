@@ -9,9 +9,9 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 1000;
-const MAX_RELEVANT_FILES_TOKENS = 10000;
-const MAX_RELEVANT_FILES_COUNT = 6;
+const MAX_SUMMARY_TOKENS = 1500;
+const MAX_RELEVANT_FILES_TOKENS = 7000;
+const MAX_RELEVANT_FILES_COUNT = 5;
 const MAX_FILE_SIZE = 30000;
 const SUMMARIZE_MESSAGES_THRESHOLD = 4; // Last n message will be left as is
 
@@ -125,8 +125,8 @@ class ChatContextBuilder {
 
   async addSummaryOfMessages() {
     let allMessagesText = '';
-    const nonEmptyMessages = this.chat.backendMessages.filter((message) => message.content);
-    const preprocessedMessages = nonEmptyMessages.map((message) => {
+    const backendMessages = this.chat.backendMessages;
+    const preprocessedMessages = backendMessages.map((message) => {
       if (Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url')) {
         return { ...message, content: 'image added to chat' };
       }
@@ -137,92 +137,95 @@ class ChatContextBuilder {
     const notSummarizedMessages = messagesToSummarize
       .filter((message) => message.id > this.lastSummarizedMessageID)
       .reduce((acc, message) => {
-        if (message.content) {
-          let messageContent = message.content;
-          const role = message.role == 'tool' ? `assistant` : message.role;
-          const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
-          acc += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
-          lastSummarizedId = message.id;
-        }
+        acc += `${this.formatMessageForSummary(message)},\n`;
+        lastSummarizedId = message.id;
         return acc;
-      }, '')
-      .trim();
+      }, '');
 
     allMessagesText = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages; // up to -SUMMARIZE_MESSAGES_THRESHOLD
 
     if (
       this.chat.countTokens(allMessagesText) > MAX_SUMMARY_TOKENS &&
-      nonEmptyMessages.length > SUMMARIZE_MESSAGES_THRESHOLD
+      backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD
     ) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessagesText);
       this.lastSummarizedMessageID = lastSummarizedId;
       allMessagesText = this.pastSummarizedMessages;
     }
 
-    const lastNMessages = nonEmptyMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
+    const lastNMessages = backendMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
     let messagesToAdd = lastNMessages.filter((message) => message.id > this.lastSummarizedMessageID);
     if (messagesToAdd.length > 0 && messagesToAdd[messagesToAdd.length - 1].role === 'user') {
       messagesToAdd.pop(); // Remove the last message if it's from a user
     }
     messagesToAdd.forEach((message) => {
-      let messageContent = message.content;
-      const role = message.role == 'tool' ? `assistant` : message.role;
-      const tool = message.role == 'tool' ? ` executed_tool="${message.name}"` : '';
-      if (message.role == 'tool' && message.name == 'replace_code') {
-        const matchingFrontEndMessage = this.chat.frontendMessages.find(
-          (frontendMessage) => frontendMessage.id === message.id - 2,
-        );
-        if (matchingFrontEndMessage) {
-          const diff = matchingFrontEndMessage.content.match(/```diff\n([\s\S]*?)```/)?.[1] || '';
-          messageContent = diff ? `${diff}\n${messageContent}` : messageContent;
-        }
-      }
-      allMessagesText += `\n<${role}${tool}>\n${messageContent}\n</${role}>\n`;
+      allMessagesText += `${this.formatMessageForSummary(message)},\n`;
     });
 
     const summary =
-      allMessagesText.trim().length > 0 ? `\n<conversation_history>\n${allMessagesText}\n</conversation_history>` : '';
+      allMessagesText.trim().length > 0
+        ? `\n<conversation_history>\n[${allMessagesText}]\n</conversation_history>`
+        : '';
 
     return summary;
   }
 
+  formatMessageForSummary(message) {
+    let messageContent = message.content;
+    let content = [];
+    if (messageContent) {
+      content.push({
+        type: message.role === 'tool' ? 'tool_result' : 'text',
+        content: messageContent,
+      });
+    }
+    if (message.tool_calls) {
+      message.tool_calls.forEach((toolCall) => {
+        content.push({
+          type: 'tool_use',
+          name: toolCall.function.name,
+        });
+      });
+    }
+    const role = message.role === 'tool' ? 'user' : message.role;
+    const result = { role, content };
+    return JSON.stringify(result, null, 2);
+  }
+
   async summarizeMessages(messages) {
     const prompt = `
-    <task>
-    ${this.chat.task}
-    </task>
-    <messages>
-    ${messages}\n
-    </messages>
-    <instructions>
-    Compress the message histor above in <messages> section.
-    <task> is provided for your reference only so you understand what information is the the most relevant. Don't include task in the summary.
-    Preserve the meaning, file names, results, order of actions, what was done and what is left.
-    Also preserve any important information or code snippets. 
-    Leave user's messages and task plan as is word for word. 
-    For each type of user leave user type (assistant or user) and summary of the messages for that section of the conversation.
-    Use xml syntax to indicate roles and messages and task plan. Example:
-    <task_plan>
-    Plan
-    </task_plan>
-    <user>
-    User message
-    </user>
-    Summary should be formatted as text with roles and messages separated by new line.
-    Make sure to remove any duplicate information.
-    </instructions>
-    `;
+    Summarize conversation_history without loosing important information.
+    
+    Summarization rules:
+     - Preserve roles, tool names, file names, what was done and what is left
+     - Preserve any important information or code snippets
+     - Leave user's messages word for word without alteration
+     - Make sure to remove any duplicate actions or information that repeats
+     - Compress "content", only keep the most important information, shorten it as much as possible
+     - Compress top (older) messages more, then lower(older) message. Compress long assistant messages into maximum 3 sentences.
+
+    Respond with compressed conversation_history without wrapping xml tag, in exactly the same JSON schema format as provided in original, but summarized.
+
+    <conversation_history>
+    [
+      ${messages}
+    ]
+    </conversation_history>`;
     const format = {
       type: 'string',
       result: 'Summary of the conversation',
     };
-    const summary = await chatController.backgroundTask.run({
+    let summary = await chatController.backgroundTask.run({
       prompt,
       format,
       model: chatController.settings.selectedModel,
     });
 
     if (summary) {
+      // Remove first "[" if present
+      summary = summary.replace(/^\s*\[/, '');
+      // Replace last "]" with "," if present
+      summary = summary.replace(/\]\s*$/, ',');
       console.log('Summarized message history:', summary);
       return summary;
     } else {
