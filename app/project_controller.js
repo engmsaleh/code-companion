@@ -44,14 +44,11 @@ class ProjectController {
     }
     if (chatController.terminalSession.terminal) {
       chatController.terminalSession.navigateToDirectory(path);
+      chatController.terminalSession.clearTerminal();
+    } else {
+      console.error('No terminal session');
     }
     this.currentProject = project;
-
-    // for saved chats, need to check
-    if (chatController.chat.isEmpty()) {
-      chatController.clearChat();
-    }
-
     document.title = project.name + ' - CodeCompanion.AI';
   }
 

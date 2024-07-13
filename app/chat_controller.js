@@ -27,8 +27,6 @@ const DEFAULT_SETTINGS = {
 class ChatController {
   constructor() {
     this.stopProcess = false;
-    this.conversationTokens = 0;
-    this.lastRequestTokens = 0;
     this.isProcessing = false;
     this.loadAllSettings();
     this.initializeModel();
@@ -37,6 +35,11 @@ class ChatController {
     this.terminalSession = new TerminalSession();
     this.processMessageChange = this.processMessageChange.bind(this);
     this.submitMessage = this.submitMessage.bind(this);
+    this.usage = {
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0,
+    };
   }
 
   loadAllSettings() {
@@ -172,6 +175,7 @@ class ChatController {
       const messages = await this.chat.chatContextBuilder.buildMessages(query, reflectMessage);
       const tools = this.chat.chatContextBuilder.taskNeedsPlan ? planningTools() : allEnabledTools();
       apiResponse = await this.model.call({ messages, model: this.settings.selectedModel, tools });
+      this.updateUsage(apiResponse.usage);
     } catch (error) {
       this.handleError(error);
     } finally {
@@ -180,6 +184,17 @@ class ChatController {
     }
 
     await this.agent.runAgent(apiResponse);
+  }
+
+  updateUsage(usage) {
+    if (!usage) return;
+
+    this.usage = {
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+      total_tokens: this.usage.total_tokens + usage.input_tokens + usage.output_tokens,
+    };
+    viewController.updateFooterMessage();
   }
 
   async fetchAndParseUrl(url) {
@@ -252,6 +267,9 @@ class ChatController {
 
   async clearChat() {
     trackEvent(`new_chat`);
+    if (this.chat) {
+      this.chat.userDecision = 'reject';
+    }
     this.chat = new Chat();
     this.agent.userDecision = null;
     this.terminalSession.createShellSession();
@@ -262,8 +280,11 @@ class ChatController {
     this.chat.renderTask();
     document.getElementById('messageInput').setAttribute('placeholder', 'Provide task details...');
     this.stopProcess = false;
-    this.conversationTokens = 0;
-    this.lastRequestTokens = 0;
+    this.usage = {
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0,
+    };
     viewController.updateFooterMessage();
     viewController.updateProjectsWindow();
 

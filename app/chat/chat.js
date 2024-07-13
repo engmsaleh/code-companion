@@ -1,5 +1,4 @@
 const { clipboard } = require('electron');
-const { getEncoding } = require('js-tiktoken');
 const ChatHistory = require('./chat_history');
 const ChatContextBuilder = require('./chat_context_builder');
 const { debounce } = require('lodash');
@@ -12,10 +11,10 @@ class Chat {
     this.lastBackendMessageId = 0;
     this.history = new ChatHistory();
     this.chatContextBuilder = new ChatContextBuilder(this);
-    this.tokenizer = getEncoding('cl100k_base');
     this.task = null;
     this.shellType = null;
     this.startTimestamp = Date.now();
+    this.userDecision = null;
   }
 
   isEmpty() {
@@ -182,10 +181,6 @@ class Chat {
   updateStreamingMessage(message) {
     const formattedMessage = viewController.formatResponse({ role: 'assistant', content: message });
     document.getElementById('streaming_output').innerHTML = formattedMessage;
-  }
-
-  countTokens(content) {
-    return this.tokenizer.encode(JSON.stringify(content) || '').length;
   }
 }
 

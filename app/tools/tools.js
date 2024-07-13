@@ -149,7 +149,7 @@ async function previewMessageMapping(functionName, args) {
   const mapping = {
     create_or_overwrite_file: {
       message: `Creating a file ${fileLink}`,
-      code: codeDiff ? `\nCode changes:\n\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
+      code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {
       message: `Reading a file ${fileLink}`,
@@ -157,7 +157,7 @@ async function previewMessageMapping(functionName, args) {
     },
     replace_code: {
       message: `Updating code in ${fileLink}:`,
-      code: `\nCode changes:\n\n\`\`\`diff\n${codeDiff}\n\`\`\``,
+      code: `\n\`\`\`diff\n${codeDiff}\n\`\`\``,
     },
     run_shell_command: {
       message: 'Executing shell command:',
@@ -219,13 +219,15 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
   const beforeLines = lines.slice(0, startLineNumber - 1);
   const afterLines = lines.slice(endLineNumber);
   const newContent = [...beforeLines, replaceWith, ...afterLines].join('\n');
+  const oldContent = lines.slice(startLineNumber - 1, endLineNumber).join('\n');
+  const codeDiff = generateDiff(oldContent, newContent, filePath, filePath);
 
   fs.writeFileSync(filePath, newContent);
 
   const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
   chatController.chat.addFrontendMessage('function', successMessage);
 
-  return `File ${filePath} updated successfully.`;
+  return `File ${filePath} updated successfully.\n<code diff>${codeDiff}</code diff>`;
 }
 
 async function getCodeToReplace({ targetFile, startLineNumber, endLineNumber }) {

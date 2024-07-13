@@ -72,7 +72,10 @@ class AnthropicModel {
     const { result } = response.content.filter((item) => item.type === 'tool_use')[0].input;
     return {
       content: result,
-      token_count: 0,
+      usage: {
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
+      },
     };
   }
 

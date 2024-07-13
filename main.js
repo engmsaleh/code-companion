@@ -1,7 +1,6 @@
 const {
   app,
   BrowserWindow,
-  globalShortcut,
   Menu,
   MenuItem,
   ipcMain,
@@ -10,6 +9,7 @@ const {
   systemPreferences,
   nativeTheme,
 } = require('electron');
+const electronLocalShortcut = require('electron-localshortcut');
 
 app.setName('CodeCompanion.AI');
 const { autoUpdater } = require('electron-updater');
@@ -19,6 +19,7 @@ const pty = require('node-pty');
 const { debounce } = require('lodash');
 const Sentry = require('@sentry/electron');
 const { initialize } = require('@aptabase/electron/main'); // for DAU tracking
+const WindowManager = require('./app/window/WindowManager');
 
 ElectronStore.initRenderer();
 const localStorage = new ElectronStore();
@@ -26,6 +27,7 @@ const localStorage = new ElectronStore();
 let win;
 let isUpdateInProgress = false;
 let terminal;
+let windowManager;
 
 if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   setTimeout(() => {
@@ -37,6 +39,51 @@ if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   });
 }
 initialize('A-US-5249376059');
+
+// Setup local shortcuts
+function setupLocalShortcuts() {
+  const shortcuts = [
+    { key: 'CmdOrCtrl+M', action: () => windowManager.minimize() },
+    { key: 'CmdOrCtrl+Alt+F', action: () => windowManager.maximize() },
+    { key: 'F11', action: () => windowManager.toggleFullScreen() },
+    { key: 'CmdOrCtrl+Left', action: () => windowManager.moveWindow('left') },
+    { key: 'CmdOrCtrl+Right', action: () => windowManager.moveWindow('right') },
+    { key: 'CmdOrCtrl+Up', action: () => windowManager.moveWindow('up') },
+    { key: 'CmdOrCtrl+Down', action: () => windowManager.moveWindow('down') },
+    { key: 'CmdOrCtrl+Shift+Left', action: () => windowManager.resizeWindow('narrower') },
+    { key: 'CmdOrCtrl+Shift+Right', action: () => windowManager.resizeWindow('wider') },
+    { key: 'CmdOrCtrl+Shift+Up', action: () => windowManager.resizeWindow('taller') },
+    { key: 'CmdOrCtrl+Shift+Down', action: () => windowManager.resizeWindow('shorter') },
+    { key: 'CmdOrCtrl+W', action: () => windowManager.close() },
+    { key: 'Alt+Space', action: () => win.show() },
+  ];
+
+  // Add Mac-specific shortcuts
+  if (process.platform === 'darwin') {
+    shortcuts.push({ key: 'Cmd+Ctrl+F', action: () => windowManager.toggleFullScreen() });
+  }
+
+  // Add Windows-specific shortcuts
+  if (process.platform === 'win32') {
+    shortcuts.push({ key: 'Alt+Space', action: () => windowManager.showSystemMenu() });
+  }
+
+  function registerShortcuts() {
+    shortcuts.forEach(({ key, action }) => {
+      electronLocalShortcut.register(win, key, action);
+    });
+  }
+
+  function unregisterShortcuts() {
+    electronLocalShortcut.unregisterAll(win);
+  }
+
+  win.on('focus', registerShortcuts);
+  win.on('blur', unregisterShortcuts);
+
+  // Initial registration
+  registerShortcuts();
+}
 
 function createWindow() {
   const { screen } = require('electron');
@@ -63,11 +110,13 @@ function createWindow() {
   });
   win.loadFile('index.html');
 
-  win.once('ready-to-show', () => {
-    win.show();
-  });
+  // Initialize WindowManager
+  windowManager = new WindowManager(win);
 
-  globalShortcut.register('Alt+Space', () => {
+  // Setup local shortcuts
+  setupLocalShortcuts();
+
+  win.once('ready-to-show', () => {
     win.show();
   });
 
@@ -149,6 +198,26 @@ function createWindow() {
         { role: 'pasteAndMatchStyle' },
         { role: 'delete' },
         { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        {
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          click: () => windowManager.minimize(),
+        },
+        {
+          label: 'Maximize',
+          accelerator: 'CmdOrCtrl+Alt+F',
+          click: () => windowManager.maximize(),
+        },
+        {
+          label: 'Toggle Full Screen',
+          accelerator: 'F11',
+          click: () => windowManager.toggleFullScreen(),
+        },
       ],
     },
   ];
@@ -285,7 +354,6 @@ async function openFile(sender) {
 
 app.on('window-all-closed', () => {
   autoUpdater.removeAllListeners();
-  globalShortcut.unregisterAll();
 
   if (process.platform !== 'darwin') {
     app.quit();
