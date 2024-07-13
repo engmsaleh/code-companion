@@ -1,6 +1,6 @@
 {
   "name": "CodeCompanion",
-  "version": "5.25.9",
+  "version": "5.25.10",
   "description": "Natural language to code",
   "copyright": "Copyright © CodeCompanion",
   "main": "main.js",
@@ -83,6 +83,7 @@
     "crypto-js": "^4.1.1",
     "diff": "^5.2.0",
     "diff2html": "^3.4.48",
+    "electron-localshortcut": "^3.2.1",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.1.7",
     "file-type": "^16.5.3",

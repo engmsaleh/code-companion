@@ -20,6 +20,7 @@ class BackgroundTask {
       const messages = this.buildMessages(prompt);
       const tool = this.buildTool(format);
       const response = await this.client.call({ messages, model, tool });
+      this.chatController.updateUsage(response.usage);
       return response.content;
     } catch (error) {
       console.error(error);

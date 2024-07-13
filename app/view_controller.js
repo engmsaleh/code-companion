@@ -168,15 +168,32 @@ class ViewController {
   }
 
   updateFooterMessage(message) {
-    let messageToShow = message || '';
-    if (chatController.conversationTokens > 0 && message) {
-      messageToShow += ' | ';
+    const formatTokens = (tokens) => (tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : tokens);
+
+    const usageMessage = this.getUsageMessage(formatTokens);
+    const combinedMessage = this.combineMessages(message, usageMessage);
+
+    this.setFooterMessage(combinedMessage);
+  }
+
+  getUsageMessage(formatTokens) {
+    const { input_tokens, output_tokens, total_tokens } = chatController.usage;
+    if (total_tokens > 0) {
+      return `Input: ${formatTokens(input_tokens)}, Output: ${formatTokens(output_tokens)}, Total: ${formatTokens(total_tokens)} tokens`;
     }
-    if (chatController.conversationTokens > 0) {
-      messageToShow += `Tokens: Last - ${chatController.lastRequestTokens}, Total - ${chatController.conversationTokens}`;
+    return '';
+  }
+
+  combineMessages(message, usageMessage) {
+    if (message && usageMessage) {
+      return `${message} | ${usageMessage}`;
     }
-    if (messageToShow) {
-      document.getElementById('footerMessage').innerText = messageToShow;
+    return message || usageMessage;
+  }
+
+  setFooterMessage(message) {
+    if (message) {
+      document.getElementById('footerMessage').innerText = message;
     }
   }
 

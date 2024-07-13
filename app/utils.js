@@ -1,5 +1,8 @@
 const isTextOrBinary = require('istextorbinary');
 const readChunkSync = require('read-chunk').sync;
+const { getEncoding } = require('js-tiktoken');
+
+const tokenizer = getEncoding('cl100k_base');
 
 async function withTimeout(promise, ms) {
   const timeout = new Promise((_, reject) =>
@@ -110,6 +113,10 @@ function log(...args) {
   }
 }
 
+function getTokenCount(content) {
+  return tokenizer.encode(JSON.stringify(content) || '').length;
+}
+
 module.exports = {
   withTimeout,
   withErrorHandling,
@@ -118,4 +125,5 @@ module.exports = {
   isTextFile,
   normalizedFilePath,
   isFileExists,
+  getTokenCount,
 };

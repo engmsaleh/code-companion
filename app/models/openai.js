@@ -1,5 +1,5 @@
 const { OpenAI } = require('openai');
-const { log } = require('../utils');
+const { log, getTokenCount } = require('../utils');
 
 const MAX_RETRIES = 3;
 
@@ -49,7 +49,10 @@ class OpenAIModel {
     return {
       content: chatCompletion.choices[0].message.content,
       tool_calls: this.formattedToolCalls(chatCompletion.choices[0].message.tool_calls),
-      token_count: 0,
+      usage: {
+        input_tokens: getTokenCount(callParams.messages),
+        output_tokens: getTokenCount(chatCompletion.choices[0].message),
+      },
     };
   }
 
@@ -62,7 +65,10 @@ class OpenAIModel {
     const { result } = JSON.parse(chatCompletion.choices[0].message.tool_calls[0].function.arguments);
     return {
       content: result,
-      token_count: 0,
+      usage: {
+        input_tokens: chatCompletion.usage?.prompt_tokens,
+        output_tokens: chatCompletion.usage?.completion_tokens,
+      },
     };
   }
 

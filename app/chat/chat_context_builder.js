@@ -1,4 +1,5 @@
 const ignore = require('ignore');
+const { getTokenCount } = require('../utils');
 
 const {
   PLAN_PROMPT_TEMPLATE,
@@ -9,11 +10,11 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 1500;
+const MAX_SUMMARY_TOKENS = 2500;
 const MAX_RELEVANT_FILES_TOKENS = 7000;
 const MAX_RELEVANT_FILES_COUNT = 5;
 const MAX_FILE_SIZE = 30000;
-const SUMMARIZE_MESSAGES_THRESHOLD = 4; // Last n message will be left as is
+const SUMMARIZE_MESSAGES_THRESHOLD = 6; // Last n message will be left as is
 
 class ChatContextBuilder {
   constructor(chat) {
@@ -144,10 +145,7 @@ class ChatContextBuilder {
 
     allMessagesText = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages; // up to -SUMMARIZE_MESSAGES_THRESHOLD
 
-    if (
-      this.chat.countTokens(allMessagesText) > MAX_SUMMARY_TOKENS &&
-      backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD
-    ) {
+    if (getTokenCount(allMessagesText) > MAX_SUMMARY_TOKENS && backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD) {
       this.pastSummarizedMessages = await this.summarizeMessages(allMessagesText);
       this.lastSummarizedMessageID = lastSummarizedId;
       allMessagesText = this.pastSummarizedMessages;
@@ -159,7 +157,7 @@ class ChatContextBuilder {
       messagesToAdd.pop(); // Remove the last message if it's from a user
     }
     messagesToAdd.forEach((message) => {
-      allMessagesText += `${this.formatMessageForSummary(message)},\n`;
+      allMessagesText += `${this.formatMessageForSummary(message, false)},\n`;
     });
 
     const summary =
@@ -170,9 +168,12 @@ class ChatContextBuilder {
     return summary;
   }
 
-  formatMessageForSummary(message) {
+  formatMessageForSummary(message, removeCodeDiff = true) {
     let messageContent = message.content;
     let content = [];
+    if (removeCodeDiff) {
+      messageContent = messageContent.replace(/<code diff>[\s\S]*<\/code diff>/g, '');
+    }
     if (messageContent) {
       content.push({
         type: message.role === 'tool' ? 'tool_result' : 'text',
@@ -345,7 +346,7 @@ class ChatContextBuilder {
   }
 
   async reduceRelevantFilesContext(fileContents, fileList) {
-    const fileContentTokenCount = this.chat.countTokens(fileContents);
+    const fileContentTokenCount = getTokenCount(fileContents);
     const lastMessageId = this.chat.backendMessages.length - 1;
     if (
       fileContentTokenCount > MAX_RELEVANT_FILES_TOKENS &&
