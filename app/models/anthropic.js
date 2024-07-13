@@ -52,15 +52,13 @@ class AnthropicModel {
 
     const finalMessage = await stream.finalMessage();
     log('Raw response', finalMessage);
-    log({
-      content: finalMessage.content.find((item) => item.type === 'text')?.text || '',
-      tool_calls: this.formattedToolCalls(finalMessage.content),
-      token_count: 0,
-    });
     return {
       content: finalMessage.content.find((item) => item.type === 'text')?.text || '',
       tool_calls: this.formattedToolCalls(finalMessage.content),
-      token_count: 0,
+      usage: {
+        input_tokens: finalMessage.usage.input_tokens,
+        output_tokens: finalMessage.usage.output_tokens,
+      },
     };
   }
 

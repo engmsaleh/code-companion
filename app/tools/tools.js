@@ -149,7 +149,7 @@ async function previewMessageMapping(functionName, args) {
   const mapping = {
     create_or_overwrite_file: {
       message: `Creating a file ${fileLink}`,
-      code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
+      code: codeDiff ? `\nCode changes:\n\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {
       message: `Reading a file ${fileLink}`,
@@ -157,7 +157,7 @@ async function previewMessageMapping(functionName, args) {
     },
     replace_code: {
       message: `Updating code in ${fileLink}:`,
-      code: `\n\`\`\`diff\n${codeDiff}\n\`\`\``,
+      code: `\nCode changes:\n\n\`\`\`diff\n${codeDiff}\n\`\`\``,
     },
     run_shell_command: {
       message: 'Executing shell command:',
