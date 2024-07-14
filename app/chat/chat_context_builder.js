@@ -171,10 +171,11 @@ class ChatContextBuilder {
   formatMessageForSummary(message, removeCodeDiff = true) {
     let messageContent = message.content;
     let content = [];
-    if (removeCodeDiff) {
-      messageContent = messageContent.replace(/<code diff>[\s\S]*<\/code diff>/g, '');
-    }
+
     if (messageContent) {
+      if (removeCodeDiff) {
+        messageContent = messageContent.replace(/<code diff>[\s\S]*<\/code diff>/g, '');
+      }
       content.push({
         type: message.role === 'tool' ? 'tool_result' : 'text',
         content: messageContent,
