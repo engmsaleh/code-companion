@@ -10,9 +10,9 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 2500;
-const MAX_RELEVANT_FILES_TOKENS = 7000;
-const MAX_RELEVANT_FILES_COUNT = 5;
+const MAX_SUMMARY_TOKENS = 3000;
+const MAX_RELEVANT_FILES_TOKENS = 10000;
+const MAX_RELEVANT_FILES_COUNT = 7;
 const MAX_FILE_SIZE = 30000;
 const SUMMARIZE_MESSAGES_THRESHOLD = 6; // Last n message will be left as is
 
@@ -199,11 +199,12 @@ class ChatContextBuilder {
     
     Summarization rules:
      - Preserve roles, tool names, file names, what was done and what is left
-     - Preserve any important information or code snippets
+     - Preserve all important information and code snippets
      - Leave user's messages word for word without alteration
      - Make sure to remove any duplicate actions or information that repeats
      - Compress "content", only keep the most important information, shorten it as much as possible
-     - Compress top (older) messages more, then lower(older) message. Compress long assistant messages into maximum 3 sentences.
+     - Compress top (older) messages more, then lower(older) message. Compress long assistant messages into maximum 3 sentences
+     - Keep plan for the task as is (can be more than 3 sentences), make sure to preserve all messages that have requirements fully
 
     Respond with compressed conversation_history without wrapping xml tag, in exactly the same JSON schema format as provided in original, but summarized.
 
