@@ -257,9 +257,11 @@ class ViewController {
 
     recentProjects.forEach((project) => {
       const projectPath = JSON.stringify(project.path).slice(1, -1);
+      const projectName =
+        project.name === projectController.currentProject?.name ? `<strong>${project.name}</strong>` : project.name;
       recentProjectsContent += `
         <div class="row">
-          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${project.name}</a></div>
+          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${projectName}</a></div>
           <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
           <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${projectPath}</div>
         </div>`;
@@ -267,7 +269,7 @@ class ViewController {
 
     if (projectController.currentProject) {
       currentProjectContent = `
-        <p><span class="me-3">${projectController.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${projectController.currentProject.path}</span></p>
+        <p><span class="me-3 fw-bold">${projectController.currentProject.name}</span><span class="text-truncate text-secondary text-nowrap d-none d-md-inline">${projectController.currentProject.path}</span></p>
       `;
     }
 

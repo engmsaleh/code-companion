@@ -50,6 +50,7 @@ class ProjectController {
     }
     this.currentProject = project;
     document.title = project.name + ' - CodeCompanion.AI';
+    viewController.showWelcomeContent();
   }
 
   getProjects() {
