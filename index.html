@@ -19,8 +19,8 @@
   <body class="d-flex flex-column h-100">
     <header class="py-2 fixed-top bg-body border-bottom">
       <div class="d-flex justify-content-center align-items-center mb-1">
-        <button class="btn shadow-none btn-sm text-decoration-none mx-1" type="button" id="settingsToggle" data-bs-toggle="offcanvas" data-bs-target="#settingsMenu">
-          <i class="bi bi-gear bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Settings"></i>
+        <button class="btn btn-lnk mx-1" type="button" id="settingsToggle" data-bs-toggle="offcanvas" data-bs-target="#settingsMenu">
+          <i class="bi bi-gear" data-bs-toggle="tooltip" data-bs-title="Settings"></i>
         </button>
         <div class="d-flex align-items-center mx-3 ms-auto">
           <label for="modelDropdown" class="form-label mx-1 mb-0">Model:</label>
@@ -31,22 +31,19 @@
           <label class="form-check-label" for="approvalToggle">Require approval</label>
           <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right" title="Require approval for actions that make changes, such as writing files or executing commands."></i>
         </div>
-        <button class="btn shadow-none btn-sm text-decoration-none mx-1 d-none d-md-block" type="button" onclick="viewController.showFeedbackModal()">
-          Feedback
-        </button>
         
-        <button class="btn shadow-none btn-sm text-decoration-none mx-1" type="button" onclick="chatController.chat.history.showModal();">
-          <i class="bi bi-save bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Save chat (Cmd/Ctrl + S)"></i>
+        <button class="btn btn-lnk" type="button" onclick="chatController.chat.history.showModal();">
+          <i class="bi bi-floppy" data-bs-toggle="tooltip" data-bs-title="Save to history (Cmd/Ctrl + S)"></i>
         </button>
         <button
-          class="btn shadow-none text-decoration-none mx-1"
+          class="btn btn-lnk"
           type="button"
           id="settingsToggle"
           data-bs-toggle="offcanvas"
           data-bs-target="#historyMenu"
           onclick="chatController.chat.history.load();"
         >
-          <i class="bi bi-clock-history bg-body border-0 fs-6" data-bs-toggle="tooltip" data-bs-title="Chat history"></i>
+          <i class="bi bi-clock-history" data-bs-toggle="tooltip" data-bs-title="Chat history"></i>
         </button>
       </div>
     </header>
@@ -294,28 +291,6 @@
               <button type="button" class="btn btn-primary" onclick="onboardingController.markAsRead()">Close</button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal" tabindex="-1" id="feedbackModal" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <form id="feedbackForm">
-            <div class="modal-header">
-              <h5 class="modal-title">Submit feedback</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-3">
-                <label for="message" class="form-label">Message</label>
-                <textarea class="form-control" id="message" name="message" placeholder="Share your thoughts or suggestions about the CodeCompanion.AI app" required></textarea>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); viewController.submitFeedback()">Send</button>
-            </div>
-          </form>
         </div>
       </div>
     </div>

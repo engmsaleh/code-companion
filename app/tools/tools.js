@@ -45,7 +45,8 @@ const toolDefinitions = [
         },
         endLineNumber: {
           type: 'integer',
-          description: 'The line number where the replacement should end (inclusive).',
+          description:
+            'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
         },
         replaceWith: {
           type: 'string',
@@ -148,7 +149,7 @@ async function previewMessageMapping(functionName, args) {
 
   const mapping = {
     create_or_overwrite_file: {
-      message: `Creating a file ${fileLink}`,
+      message: `Creating a file ${args.targetFile}`,
       code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {

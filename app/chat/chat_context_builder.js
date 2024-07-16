@@ -27,6 +27,7 @@ class ChatContextBuilder {
     this.pastSummarizedMessages = '';
     this.searchRelevantFiles = false;
     this.taskNeedsPlan = false;
+    this.isComplexTask = false;
   }
 
   async buildMessages(userMessage, reflectMessage = null) {
@@ -71,13 +72,14 @@ class ChatContextBuilder {
       (this.chat.isEmpty() && (await this.isTaskNeedsPlan()))
     ) {
       this.taskNeedsPlan = true;
+      this.isComplexTask = true;
       systemMessage = PLAN_PROMPT_TEMPLATE;
     } else {
       this.taskNeedsPlan = false;
       systemMessage = TASK_EXECUTION_PROMPT_TEMPLATE;
     }
 
-    if (this.chat.backendMessages.length > 7) {
+    if (this.chat.backendMessages.length > 7 || !this.isComplexTask) {
       systemMessage += `\n\n${FINISH_TASK_PROMPT_TEMPLATE}`;
     }
 
@@ -418,7 +420,7 @@ class ChatContextBuilder {
     const lines = content.split('\n');
     const paddedLines = lines.map((line, index) => {
       const lineNumber = (index + 1).toString().padStart(4, ' ');
-      return `${lineNumber} | ${line}`;
+      return `${lineNumber}|${line}`;
     });
     content = paddedLines.join('\n');
     return content;
