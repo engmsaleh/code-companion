@@ -68,15 +68,14 @@ Always format your response in the easy to understand way with lots of white spa
 
 When done say "Done" and stop.`;
 
-const FINISH_TASK_PROMPT_TEMPLATE = `When finished with all steps for the task, look at the code and:
-- First, list all requirements and indicate if they were fully implemented and functional or not one by one.
-- Second, list all potential bugs per changed file (check imports, syntax, indentations for python, variables, constant definitions, etc.).
-- Third, list all potential issues per file with the code logic.
-- Fourth, list any other issues that you can find (e.g., UX, UI, other code quality issues).
-- Then fix all code issues and bugs
+const FINISH_TASK_PROMPT_TEMPLATE = `
+When finished with all the steps for the task:
+- First, list all requirements and indicate if they were fully implemented and functional or not one by one with emoji checkboxes
+- Second, list all potential bugs per changed file (check imports, syntax, indentations for python, variables, constant definitions, etc.)
+- Third, list all potential issues per file with the code logic
+- Finally fix all code bugs
 
-Once all issues are fixed from above, launch the task with the default application or browser for user to check.
-Before implementing any suggested improvements from assistant ask user for approval!`;
+Once all bugs are fixed or there are no more issues, launch the task with the default application or open default browser. And ask for feedback and what to do next.`;
 
 module.exports = {
   PLAN_PROMPT_TEMPLATE,

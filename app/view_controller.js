@@ -3,7 +3,6 @@ const { marked } = require('marked');
 const { markedHighlight } = require('marked-highlight');
 const autosize = require('autosize');
 const { drawDiff } = require('./tools/code_diff');
-const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
 
 class ViewController {
   initializeUIFormatting() {
@@ -179,7 +178,7 @@ class ViewController {
   getUsageMessage(formatTokens) {
     const { input_tokens, output_tokens, total_tokens } = chatController.usage;
     if (total_tokens > 0) {
-      return `Input: ${formatTokens(input_tokens)}, Output: ${formatTokens(output_tokens)}, Total: ${formatTokens(total_tokens)} tokens`;
+      return `Last input: ${formatTokens(input_tokens)}, output: ${formatTokens(output_tokens)}. Total this task: ${formatTokens(total_tokens)} tokens`;
     }
     return '';
   }
@@ -224,29 +223,6 @@ class ViewController {
   openFileInIDE(filePath) {
     const terminalCommand = `${chatController.settings.commandToOpenFile} "${filePath}"`;
     chatController.terminalSession.executeCommandWithoutOutput(terminalCommand);
-  }
-
-  showFeedbackModal() {
-    feedbackModal.show();
-  }
-
-  submitFeedback() {
-    const form = document.getElementById('feedbackForm');
-    const formData = new FormData(form);
-    fetch('https://submit-form.com/iStsJP8J', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(formData).toString(),
-    })
-      .then((data) => {
-        form.reset();
-        feedbackModal.hide();
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
   }
 
   showWelcomeContent() {

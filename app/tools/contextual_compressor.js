@@ -5,11 +5,13 @@ const { OpenAIEmbeddings } = require('@langchain/openai');
 const { ContextualCompressionRetriever } = require('langchain/retrievers/contextual_compression');
 const { LLMChainExtractor } = require('langchain/retrievers/document_compressors/chain_extract');
 
+const { CONTEXTUAL_COMPRESSION_MODEL_NAME, EMBEDDINGS_MODEL_NAME } = require('../static/models_config');
+
 async function contextualCompress(query, texts, metadatas = [], docsToRetrieve = 5) {
   const openAIApiKey = chatController.settings.apiKey;
   const model = new OpenAI({
     openAIApiKey: openAIApiKey,
-    modelName: 'gpt-3.5-turbo-0613',
+    modelName: CONTEXTUAL_COMPRESSION_MODEL_NAME,
     temperature: 0.2,
   });
   const baseCompressor = LLMChainExtractor.fromLLM(model);
@@ -26,7 +28,7 @@ async function contextualCompress(query, texts, metadatas = [], docsToRetrieve =
     docs,
     new OpenAIEmbeddings({
       openAIApiKey,
-      modelName: 'text-embedding-ada-002',
+      modelName: EMBEDDINGS_MODEL_NAME,
       maxRetries: 3,
       timeout: 30 * 1000,
     }),

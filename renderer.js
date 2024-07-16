@@ -90,8 +90,3 @@ document.getElementById('approve_button').addEventListener('click', function () 
 document.addEventListener('click', (event) => {
   viewController.handleClick(event);
 });
-
-document.getElementById('feedbackForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  viewController.submitFeedback();
-});
