@@ -357,7 +357,7 @@ async function openFileLink(filepath) {
       filename = path.relative(chatController.agent.currentWorkingDir, absolutePath);
     }
 
-    return `<a href="#" onclick="event.preventDefault(); viewController.openFileInIDE('${absolutePath}')">${filename}</a>`;
+    return `<a href="#" onclick="event.preventDefault(); viewController.openFileInIDE('${absolutePath.replace(/\\/g, '\\\\')}')">${filename}</a>`;
   } catch (error) {
     console.error(error);
     return filepath;
