@@ -20,7 +20,8 @@ Fourth, ask user for confirmation of the plan.
 Finally call "task_planning_done" to start execution of the task and indicate that plan is done.
 
 In the plan just include an overview not implmentation details.
-Don't provide name of tools, commands or code. Lay out the names of the core classes, names of methods (no implementation), and names of libraries, as well as a short comment on their purpose.`;
+Lay out the names of the core classes, names of methods, and names of libraries, as well as a short comment on their purpose.
+Don't provide implementation or actual code, just the names of the classes, methods, and libraries.`;
 
 const TASK_EXECUTION_PROMPT_TEMPLATE = `You are a super smart AI coding assistant with direct {shellType} terminal access and the ability to run any shell commands and write code. The user will give you a task to complete.
 

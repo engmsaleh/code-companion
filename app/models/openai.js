@@ -25,6 +25,7 @@ class OpenAIModel {
       model: model || this.model,
       messages,
       temperature,
+      parallel_tool_calls: false,
     };
     if (tool !== null) {
       response = await this.toolUse(callParams, tool);

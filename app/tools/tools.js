@@ -126,7 +126,6 @@ const toolDefinitions = [
 ];
 
 async function previewMessageMapping(functionName, args) {
-  let codeToReplace = '';
   let codeDiff = '';
   let fileLink = '';
 
@@ -139,8 +138,8 @@ async function previewMessageMapping(functionName, args) {
   }
 
   if (functionName === 'replace_code') {
-    codeToReplace = await getCodeToReplace(args);
-    codeDiff = generateDiff(codeToReplace, args.replaceWith, args.targetFile, args.targetFile);
+    const { newContent, oldContent } = await codeAfterReplace(args);
+    codeDiff = generateDiff(oldContent, newContent, args.targetFile, args.targetFile);
   }
 
   if (args.targetFile) {
@@ -208,39 +207,38 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
     return doesntExistMessage;
   }
 
-  let content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split('\n');
-
-  if (startLineNumber < 1 || endLineNumber > lines.length || startLineNumber > endLineNumber) {
+  if (startLineNumber < 1 || startLineNumber > endLineNumber) {
     const invalidRangeMessage = `Invalid line range: ${startLineNumber}-${endLineNumber}`;
     chatController.chat.addFrontendMessage('function', invalidRangeMessage);
     return invalidRangeMessage;
   }
 
-  const beforeLines = lines.slice(0, startLineNumber - 1);
-  const afterLines = lines.slice(endLineNumber);
-  const newContent = [...beforeLines, replaceWith, ...afterLines].join('\n');
-  const oldContent = lines.slice(startLineNumber - 1, endLineNumber).join('\n');
+  const { newContent, oldContent } = await codeAfterReplace({
+    targetFile,
+    startLineNumber,
+    endLineNumber,
+    replaceWith,
+  });
   const codeDiff = generateDiff(oldContent, newContent, filePath, filePath);
-
   fs.writeFileSync(filePath, newContent);
-
   const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
   chatController.chat.addFrontendMessage('function', successMessage);
 
   return `File ${filePath} updated successfully.\n<code diff>${codeDiff}</code diff>`;
 }
 
-async function getCodeToReplace({ targetFile, startLineNumber, endLineNumber }) {
+async function codeAfterReplace({ targetFile, startLineNumber, endLineNumber, replaceWith }) {
   const filePath = await normalizedFilePath(targetFile);
-  if (!fs.existsSync(filePath)) {
-    const doesntExistMessage = `File with filepath '${targetFile}' does not exist`;
-    chatController.chat.addFrontendMessage('function', doesntExistMessage);
-    return doesntExistMessage;
-  }
-  const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split('\n');
-  return lines.slice(startLineNumber - 1, endLineNumber).join('\n');
+  let oldContent = fs.readFileSync(filePath, 'utf8');
+  const lines = oldContent.split('\n');
+  const beforeLines = lines.slice(0, startLineNumber - 1);
+  const afterLines = lines.slice(endLineNumber);
+  const newContent = [...beforeLines, replaceWith, ...afterLines].join('\n');
+
+  return {
+    newContent,
+    oldContent,
+  };
 }
 
 async function readFile({ targetFile }) {
@@ -464,5 +462,4 @@ module.exports = {
   planningTools,
   toolDefinitions,
   previewMessageMapping,
-  getCodeToReplace,
 };
