@@ -153,6 +153,12 @@ function createWindow() {
           },
         },
         {
+          label: 'Download Chat Logs',
+          click() {
+            win.webContents.send('download-logs');
+          },
+        },
+        {
           label: 'Check for Updates',
           click: () => {
             if (isUpdateInProgress) return;
@@ -416,17 +422,28 @@ ipcMain.on('write-shell', (event, args) => {
 });
 
 ipcMain.on('execute-command', (event, command) => {
-  const shell = process.platform === 'win32' ? 'powershell.exe' : process.platform === 'darwin' ? 'zsh' : 'bash';
-  const shell_args = process.platform === 'win32' ? [] : ['-l'];
+  let shell, shellArgs;
 
-  const tempTerminal = pty.spawn(shell, shell_args, {
+  if (process.platform === 'win32') {
+    shell = 'powershell.exe';
+    shellArgs = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', `& {${command}}`];
+  } else {
+    shell = process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash';
+    shellArgs = ['-l', '-c', command];
+  }
+
+  const tempTerminal = pty.spawn(shell, shellArgs, {
     name: 'xterm-256color',
     cwd: process.cwd(),
     env: process.env,
   });
 
-  tempTerminal.write(`${command}\r`);
-  tempTerminal.on('exit', () => {
+  tempTerminal.on('data', (data) => {
+    event.sender.send('command-output', data);
+  });
+
+  tempTerminal.on('exit', (exitCode) => {
+    event.sender.send('command-exit', exitCode);
     tempTerminal.kill();
   });
 });

@@ -111,6 +111,7 @@ function log(...args) {
   if (isDevelopment) {
     console.log(...args);
   }
+  chatController.chatLogs.push(args);
 }
 
 function getTokenCount(content) {

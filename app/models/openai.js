@@ -60,7 +60,9 @@ class OpenAIModel {
     callParams.tools = [this.openAiToolFormat(tool)];
     callParams.tool_choice = { type: 'function', function: { name: tool.name } };
     log('Calling model API:', callParams);
-    const chatCompletion = await this.client.chat.completions.create(callParams);
+    const chatCompletion = await this.client.chat.completions.create(callParams, {
+      signal: this.abortController.signal,
+    });
     log('Raw response', chatCompletion);
     const { result } = JSON.parse(chatCompletion.choices[0].message.tool_calls[0].function.arguments);
     return {

@@ -67,7 +67,9 @@ class AnthropicModel {
     callParams.tool_choice = { type: 'tool', name: tool.name };
 
     log('Calling model API:', callParams);
-    const response = await this.client.messages.create(callParams);
+    const response = await this.client.messages.create(callParams, {
+      signal: this.abortController.signal,
+    });
     log('Raw response', response);
     const { result } = response.content.filter((item) => item.type === 'tool_use')[0].input;
     return {
