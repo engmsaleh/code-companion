@@ -31,6 +31,7 @@ class ChatController {
     this.loadAllSettings();
     this.initializeModel();
     this.chat = new Chat();
+    this.chatLogs = [];
     this.agent = new Agent();
     this.terminalSession = new TerminalSession();
     this.processMessageChange = this.processMessageChange.bind(this);
@@ -271,6 +272,7 @@ class ChatController {
       this.chat.userDecision = 'reject';
     }
     this.chat = new Chat();
+    this.chatLogs = [];
     this.agent.userDecision = null;
     this.terminalSession.createShellSession();
     document.getElementById('output').innerHTML = '';

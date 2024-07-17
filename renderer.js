@@ -71,6 +71,17 @@ document.addEventListener('DOMContentLoaded', () => {
   onboardingController.showAllTips();
 });
 
+ipcRenderer.on('download-logs', () => {
+  const chatLogs = chatController.chatLogs;
+  const chatLogsData = JSON.stringify(chatLogs, null, 2);
+  const blob = new Blob([chatLogsData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'chat_logs.json';
+  link.click();
+});
+
 const debouncedSubmit = debounce(chatController.processMessageChange, 100);
 document.getElementById('messageInput').addEventListener('keydown', debouncedSubmit);
 

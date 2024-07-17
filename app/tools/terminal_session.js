@@ -7,7 +7,7 @@ const { Unicode11Addon } = require('xterm-addon-unicode11');
 const interact = require('interactjs');
 const { ipcRenderer, shell } = require('electron');
 const { debounce } = require('lodash');
-const { withTimeout } = require('../utils');
+const { withTimeout, log } = require('../utils');
 
 let FIXED_PROMPT = '\x91\x91\x91';
 const PROMPT_TIMEOUT = 1000;
@@ -179,6 +179,7 @@ class TerminalSession {
   }
 
   executeCommandWithoutOutput(command) {
+    log('executeCommandWithoutOutput', command);
     ipcRenderer.send('execute-command', command);
   }
 
