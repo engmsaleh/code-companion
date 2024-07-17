@@ -221,7 +221,7 @@ class ViewController {
   }
 
   openFileInIDE(filePath) {
-    const terminalCommand = `${chatController.settings.commandToOpenFile} "${filePath}"`;
+    const terminalCommand = `${chatController.settings.commandToOpenFile} "${filePath.replace(/\\/g, '/')}"`;
     chatController.terminalSession.executeCommandWithoutOutput(terminalCommand);
   }
 
