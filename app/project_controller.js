@@ -7,7 +7,7 @@ const ccignoreTemplate = require('./static/embeddings_ignore_patterns');
 const CodeEmbeddings = require('./tools/code_embeddings');
 const { EMBEDDINGS_VERSION } = require('./static/models_config');
 
-const LARGE_FILE_SIZE = 100000;
+const LARGE_FILE_SIZE = 50000;
 const addInstructionsModal = new bootstrap.Modal(document.getElementById('addInstructionsModal'));
 
 class ProjectController {

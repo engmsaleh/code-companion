@@ -272,6 +272,7 @@ class ChatController {
       this.chat.userDecision = 'reject';
     }
     this.chat = new Chat();
+    this.initializeModel();
     this.chatLogs = [];
     this.agent.userDecision = null;
     this.terminalSession.createShellSession();

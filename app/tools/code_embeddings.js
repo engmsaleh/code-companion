@@ -216,8 +216,8 @@ Codebase snippets search results:
 
 ${JSON.stringify(searchResultsWithIndex)}
 
-What array indexes of these search result objects in JSON array above are the most relevant to my search query?
-Respond with JSON array only with actual array indexes in the order of search result relevance. Do not include indexes of tottally irrelevant search results.`;
+What array indexes of these search result objects in the JSON array above are the most relevant to my search query?
+Respond with a JSON array containing only the actual array indexes in order of search result relevance. Do not include indexes of totally irrelevant search results.`;
       const format = {
         type: 'array',
         description: 'Array of indexes representing the most relevant search results',
