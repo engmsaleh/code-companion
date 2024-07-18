@@ -2,7 +2,6 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { log } = require('../utils');
 
 const MAX_RETRIES = 3;
-const MAX_TOKENS = 4096;
 
 class AnthropicModel {
   constructor({ model, apiKey, baseUrl, abortController, streamCallback }) {
@@ -12,6 +11,14 @@ class AnthropicModel {
       apiKey: apiKey,
       maxRetries: MAX_RETRIES,
     };
+    this.options = {
+      signal: this.abortController.signal,
+    };
+    this.maxTokens = 4096;
+    if (model === 'claude-3-5-sonnet-20240620') {
+      this.maxTokens = 8192;
+      this.options.headers = { 'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15' };
+    }
     if (baseUrl) {
       config.baseURL = baseUrl;
     }
@@ -27,7 +34,7 @@ class AnthropicModel {
       system: system ? system.content : null,
       messages: messages.filter((message) => message.role !== 'system'),
       temperature,
-      max_tokens: MAX_TOKENS,
+      max_tokens: this.maxTokens,
     };
     if (tool !== null) {
       response = await this.toolUse(callParams, tool);
@@ -41,14 +48,10 @@ class AnthropicModel {
   async stream(callParams) {
     log('Calling model API:', callParams);
     let message = '';
-    const stream = this.client.messages
-      .stream(callParams, {
-        signal: this.abortController.signal,
-      })
-      .on('text', (text) => {
-        message += text;
-        this.streamCallback(message);
-      });
+    const stream = this.client.messages.stream(callParams, this.options).on('text', (text) => {
+      message += text;
+      this.streamCallback(message);
+    });
 
     const finalMessage = await stream.finalMessage();
     log('Raw response', finalMessage);
@@ -67,9 +70,7 @@ class AnthropicModel {
     callParams.tool_choice = { type: 'tool', name: tool.name };
 
     log('Calling model API:', callParams);
-    const response = await this.client.messages.create(callParams, {
-      signal: this.abortController.signal,
-    });
+    const response = await this.client.messages.create(callParams, this.options);
     log('Raw response', response);
     const { result } = response.content.filter((item) => item.type === 'tool_use')[0].input;
     return {
@@ -82,16 +83,37 @@ class AnthropicModel {
   }
 
   formattedToolCalls(content) {
-    return content
-      .filter((item) => item.type === 'tool_use')
-      .map((item) => {
-        return {
+    const toolCalls = content.filter((item) => item.type === 'tool_use');
+    if (!toolCalls) return null;
+
+    let parsedToolCalls = [];
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.name;
+      const args = toolCall.input;
+      const firstArgKey = Object.keys(args)[0];
+      if (
+        args[firstArgKey] &&
+        Array.isArray(args[firstArgKey]) &&
+        args[firstArgKey].every((item) => typeof item === 'object' && item !== null)
+      ) {
+        for (const item of args[firstArgKey]) {
+          parsedToolCalls.push({
+            function: {
+              name: functionName,
+              arguments: item,
+            },
+          });
+        }
+      } else {
+        parsedToolCalls.push({
           function: {
-            name: item.name,
-            arguments: item.input,
+            name: functionName,
+            arguments: args,
           },
-        };
-      });
+        });
+      }
+    }
+    return parsedToolCalls;
   }
 
   anthropicToolFormat(tool) {

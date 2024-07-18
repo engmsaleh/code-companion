@@ -75,16 +75,37 @@ class OpenAIModel {
     };
   }
 
-  formattedToolCalls(tool_calls) {
-    if (!tool_calls) return null;
-    return tool_calls.map((item) => {
-      return {
-        function: {
-          name: item.function.name,
-          arguments: item.function.arguments,
-        },
-      };
-    });
+  formattedToolCalls(toolCalls) {
+    if (!toolCalls) return null;
+
+    let parsedToolCalls = [];
+    for (const toolCall of toolCalls) {
+      const functionName = toolCall.function.name;
+      const args = JSON.parse(toolCall.function.arguments);
+      const firstArgKey = Object.keys(args)[0];
+      if (
+        args[firstArgKey] &&
+        Array.isArray(args[firstArgKey]) &&
+        args[firstArgKey].every((item) => typeof item === 'object' && item !== null)
+      ) {
+        for (const item of args[firstArgKey]) {
+          parsedToolCalls.push({
+            function: {
+              name: functionName,
+              arguments: item,
+            },
+          });
+        }
+      } else {
+        parsedToolCalls.push({
+          function: {
+            name: functionName,
+            arguments: args,
+          },
+        });
+      }
+    }
+    return parsedToolCalls;
   }
 
   openAiToolFormat(tool) {

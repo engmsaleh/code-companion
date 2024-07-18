@@ -65,8 +65,8 @@ Search results are:
 
 ${JSON.stringify(searchResultsWithIndex)}
 
-What array indexes of these search result objects in JSON array above are the most relevant and complete search results that may answer question in my search queries?
-Respond with JSON array only with actual array indexes in the order of relevance, minimize number of items returned but results must be enough to satisfy research.`;
+What array indexes of these search result objects in the JSON array above are the most relevant and complete search results that may answer the question in my search queries?
+Respond with a JSON array containing only the actual array indexes in order of relevance. Minimize the number of items returned, but ensure the results are sufficient to satisfy the research.`;
 
       const format = {
         type: 'array',

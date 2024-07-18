@@ -97,7 +97,7 @@ class ChatContextBuilder {
     const prompt = `
     Task:
     "${this.chat.task}"\n
-    Is this user task will need to be brainstormed and planned before execution? Respond false, if this is a simple task that involves only a few commands or one file manipulation.`;
+    Will this user task need to be brainstormed and planned before execution? Respond false if this is a simple task that involves only a few commands or one file manipulation.`;
 
     const format = {
       type: 'boolean',
@@ -198,7 +198,7 @@ class ChatContextBuilder {
 
   async summarizeMessages(messages) {
     const prompt = `
-    Summarize conversation_history without loosing important information.
+    Summarize conversation_history without losing important information.
     
     Summarization rules:
      - Preserve roles, tool names, file names, what was done and what is left
@@ -206,10 +206,10 @@ class ChatContextBuilder {
      - Leave user's messages word for word without alteration
      - Make sure to remove any duplicate actions or information that repeats
      - Compress "content", only keep the most important information, shorten it as much as possible
-     - Compress top (older) messages more, then lower(older) message. Compress long assistant messages into maximum 3 sentences
+     - Compress top (older) messages more, then lower (newer) messages. Compress long assistant messages into maximum 3 sentences
      - Keep plan for the task as is (can be more than 3 sentences), make sure to preserve all messages that have requirements fully
 
-    Respond with compressed conversation_history without wrapping xml tag, in exactly the same JSON schema format as provided in original, but summarized.
+    Respond with compressed conversation_history without wrapping XML tag, in exactly the same JSON schema format as provided in the original, but summarized.
 
     <conversation_history>
     [
@@ -372,14 +372,14 @@ class ChatContextBuilder {
   async updateListOfRelevantFiles(fileContents) {
     const messageHistory = [this.addTaskMessage(), await this.addSummaryOfMessages()];
 
-    const prompt = `AI coding assistnant is helping user with a task.
-    Here is summary of the conversation and what was done: ${messageHistory}
+    const prompt = `AI coding assistant is helping user with a task.
+    Here is a summary of the conversation and what was done: ${messageHistory}
     
-    The content of the files is too long to process. Out of the list of files below, select the most relevant files that assistant still needs to know contents of in order to complete user's task.
+    The content of the files is too long to process. Out of the list of files below, select the most relevant files that the assistant still needs to know the contents of in order to complete the user's task.
     The files are:\n\n${fileContents}
     
     Include only required files, exclude files that are already processed or most likely not needed.
-    Respond with the array of file paths exactly as they appeared (do not shorten or change file path) in the list above separated by comma.
+    Respond with an array of file paths exactly as they appeared (do not shorten or change file paths) in the list above, separated by commas.
     If all files are relevant, respond with a list of all files.
     Order files by importance, most important first.
     `;
@@ -505,10 +505,24 @@ class ChatContextBuilder {
         this.searchRelevantFiles = true;
         const topLevelEntries = await fs.promises.readdir(rootDir, { withFileTypes: true });
         const filteredTopLevelEntries = topLevelEntries.filter((entry) => !ig.ignores(entry.name));
-        const folderStructure = filteredTopLevelEntries
-          .map((entry) => `- ${entry.name}${entry.isDirectory() ? '/' : ''}`)
-          .join('\n');
-        return folderStructure;
+
+        const folderStructure = [];
+        for (const entry of filteredTopLevelEntries) {
+          if (entry.isDirectory()) {
+            folderStructure.push(`- ${entry.name}/`);
+            const subEntries = await fs.promises.readdir(path.join(rootDir, entry.name), { withFileTypes: true });
+            const filteredSubEntries = subEntries.filter(
+              (subEntry) => !ig.ignores(path.join(entry.name, subEntry.name)),
+            );
+            for (const subEntry of filteredSubEntries) {
+              folderStructure.push(`  - ${subEntry.name}${subEntry.isDirectory() ? '/' : ''}`);
+            }
+          } else {
+            folderStructure.push(`- ${entry.name}`);
+          }
+        }
+
+        return folderStructure.join('\n');
       }
     } catch (error) {
       chatController.chat.addFrontendMessage(

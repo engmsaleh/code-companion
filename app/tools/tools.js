@@ -11,17 +11,25 @@ const { generateDiff } = require('./code_diff');
 const toolDefinitions = [
   {
     name: 'create_or_overwrite_file',
-    description: 'Create or overwrite a file with new content',
+    description: 'Create or overwrite a file with new content. Try to create all requested files in a single step.',
     parameters: {
       type: 'object',
       properties: {
-        targetFile: {
-          type: 'string',
-          description: 'File path',
-        },
-        createText: {
-          type: 'string',
-          description: `Output the entire completed source code for a file in a single step. Always use correct indentation and new lines.`,
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              targetFile: {
+                type: 'string',
+                description: 'File path',
+              },
+              createText: {
+                type: 'string',
+                description: `Output the entire completed source code for a file in a single step. Always use correct indentation and new lines.`,
+              },
+            },
+          },
         },
       },
     },
@@ -31,30 +39,38 @@ const toolDefinitions = [
   },
   {
     name: 'replace_code',
-    description: 'Replace a portion of a file with new content using line numbers.',
+    description:
+      'Replace a portion of a file with new content. Try to make multiple replacements in a single step in different files, but not multiple replacements in a single file.',
     parameters: {
       type: 'object',
       properties: {
-        targetFile: {
-          type: 'string',
-          description: 'Path to the file to be modified.',
-        },
-        startLineNumber: {
-          type: 'integer',
-          description: 'The line number where the replacement should start (inclusive).',
-        },
-        endLineNumber: {
-          type: 'integer',
-          description:
-            'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
-        },
-        replaceWith: {
-          type: 'string',
-          description:
-            'New content to replace the specified lines. Ensure correct indentation for each new line of code inserted.',
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              targetFile: {
+                type: 'string',
+                description: 'Path to the file to be modified.',
+              },
+              startLineNumber: {
+                type: 'integer',
+                description: 'The line number where the replacement should start (inclusive).',
+              },
+              endLineNumber: {
+                type: 'integer',
+                description:
+                  'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
+              },
+              replaceWith: {
+                type: 'string',
+                description:
+                  'New content to replace the specified lines. Ensure correct indentation for each new line of code inserted.',
+              },
+            },
+          },
         },
       },
-      required: ['targetFile', 'startLineNumber', 'endLineNumber', 'replaceWith'],
     },
     executeFunction: replaceInFile,
     enabled: true,
@@ -62,12 +78,20 @@ const toolDefinitions = [
   },
   {
     name: 'read_file',
-    description: 'Read file',
+    description: 'Read files',
     parameters: {
       type: 'object',
       properties: {
-        targetFile: {
-          type: 'string',
+        files: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              targetFile: {
+                type: 'string',
+              },
+            },
+          },
         },
       },
     },
@@ -77,12 +101,21 @@ const toolDefinitions = [
   },
   {
     name: 'run_shell_command',
-    description: 'Run shell command',
+    description:
+      'Run shell commands. If multilpe commands need to be run, provide list of commands in the order they should be run.',
     parameters: {
       type: 'object',
       properties: {
-        command: {
-          type: 'string',
+        commands: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              command: {
+                type: 'string',
+              },
+            },
+          },
         },
       },
     },
@@ -404,13 +437,13 @@ async function checkIfAnswersQuery(query, searchResult) {
     result: 'true or false',
   };
   const prompt = `
-I am searching web for this query: '${query}'
-Search result is:
+I am searching the web for this query: '${query}'
+The search result is:
 
 ${JSON.stringify(searchResult)}
 
-Does this result answer search query question?
-Respond with boolean value:  "true" or "false"`;
+Does this result answer the search query question?
+Respond with a boolean value: "true" or "false"`;
   const result = await chatController.backgroundTask.run({ prompt, format });
 
   return result !== false;
