@@ -19,6 +19,28 @@ This app can help with many coding tasks. It's capable of searching codebases, s
 - Save chat conversations
 - Custom instructions per project
 
+## 😎 User Feedback
+
+Here's what some of our users have to say about CodeCompanion.AI:
+
+> "Solid! I've tried nearly every code-copilot and still find that CodeCompanion is up there with the best and just manages to do the job I want it to, can't wait to try Claude 3.5, many thanks for all your work on this project 🙏🤔"
+>
+> **Dan H** (07/06/2024 10:02 PM)
+
+> "Hey @CodeCompanion.AI, I want to say I absolutely love this product; it works for me better than any open interpreter every time. It's easy to use and straightforward and I find myself using it more than ChatGPT. Thank you!"
+>
+> **Mfayed** (03/25/2024 8:06 AM)
+
+> "Cranking right along like a good CodeCompanion 😎
+> I'm really digging how it doesn't just fail on a problem. It makes it work. Who needs Devin?"
+>
+> **User**
+
+> "Awesomee
+> At my company I told my coworkers I was never impressed by Devin as I have already used CodeCompanion"
+>
+> **Zenitsu** (07/06/2024 2:42 PM)
+
 ## 🚀 Quick Start
 
 To start using CodeCompanion desktop app, simply download it:
