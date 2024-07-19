@@ -10,7 +10,7 @@ const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
 const AnthropicModel = require('./models/anthropic');
-const { defaultModel } = require('./static/models_config');
+const { defaultModel, defaultOpenAISmallModel, defaultAnthropicSmallModel } = require('./static/models_config');
 const { allEnabledTools, planningTools } = require('./tools/tools');
 
 const DEFAULT_SETTINGS = {
@@ -74,12 +74,29 @@ class ChatController {
       apiKey,
       model: this.settings.selectedModel,
       baseUrl: this.settings.baseUrl,
-      abortController: this.abortController,
+      chatController: this,
       streamCallback: (snapshot) => {
         this.chat.updateStreamingMessage(snapshot);
       },
     });
+    this.initializeSmallModel();
     this.backgroundTask = new BackgroundTask(this);
+  }
+
+  initializeSmallModel() {
+    if (this.settings.apiKey) {
+      this.smallModel = new OpenAIModel({
+        apiKey: this.settings.apiKey,
+        model: defaultOpenAISmallModel,
+        chatController: this,
+      });
+    } else if (this.settings.anthropicApiKey) {
+      this.smallModel = new AnthropicModel({
+        apiKey: this.settings.anthropicApiKey,
+        model: defaultAnthropicSmallModel,
+        chatController: this,
+      });
+    }
   }
 
   renderSettingValueInUI(key, value) {

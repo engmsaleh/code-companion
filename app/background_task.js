@@ -11,15 +11,16 @@ class BackgroundTask {
 
   constructor(chatController) {
     this.messages = [];
-    this.client = chatController.model;
+    this.client = chatController.smallModel;
     this.chatController = chatController;
   }
 
-  async run({ prompt, format, model = this.chatController.settings.selectedModel }) {
+  async run({ prompt, format }) {
     try {
       const messages = this.buildMessages(prompt);
       const tool = this.buildTool(format);
-      const response = await this.client.call({ messages, model, tool });
+      log('BackgroundTask:');
+      const response = await this.client.call({ messages, tool });
       this.chatController.updateUsage(response.usage);
       return response.content;
     } catch (error) {

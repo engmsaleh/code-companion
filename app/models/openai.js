@@ -1,12 +1,12 @@
 const { OpenAI } = require('openai');
 const { log, getTokenCount } = require('../utils');
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 
 class OpenAIModel {
-  constructor({ model, apiKey, baseUrl, abortController, streamCallback }) {
+  constructor({ model, apiKey, baseUrl, streamCallback, chatController }) {
     this.model = model;
-    this.abortController = abortController;
+    this.chatController = chatController;
     const config = {
       apiKey: apiKey,
       dangerouslyAllowBrowser: true,
@@ -25,7 +25,6 @@ class OpenAIModel {
       model: model || this.model,
       messages,
       temperature,
-      parallel_tool_calls: false,
     };
     if (tool !== null) {
       response = await this.toolUse(callParams, tool);
@@ -40,7 +39,7 @@ class OpenAIModel {
     callParams.stream = true;
     log('Calling model API:', callParams);
     const stream = this.client.beta.chat.completions.stream(callParams, {
-      signal: this.abortController.signal,
+      signal: this.chatController.abortController.signal,
     });
     stream.on('content', (_delta, snapshot) => {
       this.streamCallback(snapshot);
@@ -62,7 +61,7 @@ class OpenAIModel {
     callParams.tool_choice = { type: 'function', function: { name: tool.name } };
     log('Calling model API:', callParams);
     const chatCompletion = await this.client.chat.completions.create(callParams, {
-      signal: this.abortController.signal,
+      signal: this.chatController.abortController.signal,
     });
     log('Raw response', chatCompletion);
     const { result } = JSON.parse(chatCompletion.choices[0].message.tool_calls[0].function.arguments);
@@ -82,28 +81,12 @@ class OpenAIModel {
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
       const args = JSON.parse(toolCall.function.arguments);
-      const firstArgKey = Object.keys(args)[0];
-      if (
-        args[firstArgKey] &&
-        Array.isArray(args[firstArgKey]) &&
-        args[firstArgKey].every((item) => typeof item === 'object' && item !== null)
-      ) {
-        for (const item of args[firstArgKey]) {
-          parsedToolCalls.push({
-            function: {
-              name: functionName,
-              arguments: item,
-            },
-          });
-        }
-      } else {
-        parsedToolCalls.push({
-          function: {
-            name: functionName,
-            arguments: args,
-          },
-        });
-      }
+      parsedToolCalls.push({
+        function: {
+          name: functionName,
+          arguments: args,
+        },
+      });
     }
     return parsedToolCalls;
   }
@@ -116,8 +99,8 @@ class OpenAIModel {
   }
 
   abort() {
-    this.abortController.abort();
-    this.abortController = new AbortController();
+    this.chatController.abortController.abort();
+    this.chatController.abortController = new AbortController();
   }
 }
 

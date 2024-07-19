@@ -10,7 +10,7 @@ const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
 
-const MAX_SUMMARY_TOKENS = 3000;
+const MAX_SUMMARY_TOKENS = 2000;
 const MAX_RELEVANT_FILES_TOKENS = 10000;
 const MAX_RELEVANT_FILES_COUNT = 7;
 const MAX_FILE_SIZE = 30000;
@@ -147,10 +147,11 @@ class ChatContextBuilder {
 
     allMessagesText = this.pastSummarizedMessages + '\n\n' + notSummarizedMessages; // up to -SUMMARIZE_MESSAGES_THRESHOLD
 
-    if (getTokenCount(allMessagesText) > MAX_SUMMARY_TOKENS && backendMessages.length > SUMMARIZE_MESSAGES_THRESHOLD) {
-      this.pastSummarizedMessages = await this.summarizeMessages(allMessagesText);
-      this.lastSummarizedMessageID = lastSummarizedId;
-      allMessagesText = this.pastSummarizedMessages;
+    if (getTokenCount(notSummarizedMessages) > MAX_SUMMARY_TOKENS) {
+      this.summarizeMessages(allMessagesText).then((summarizedMessages) => {
+        this.pastSummarizedMessages = summarizedMessages;
+        this.lastSummarizedMessageID = lastSummarizedId;
+      });
     }
 
     const lastNMessages = backendMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
@@ -198,18 +199,20 @@ class ChatContextBuilder {
 
   async summarizeMessages(messages) {
     const prompt = `
-    Summarize conversation_history without losing important information.
+    Compress conversation_history below without losing important information.
+    Compress with at least .75 or more compression ratio.
     
     Summarization rules:
-     - Preserve roles, tool names, file names, what was done and what is left
+     - Preserve roles, tool names, file names
      - Preserve all important information and code snippets
-     - Leave user's messages word for word without alteration
-     - Make sure to remove any duplicate actions or information that repeats
+     - Leave messages with "user" role word for word without alteration
+     - Make sure to remove any duplicate or similar actions or information that repeats
+     - Compress terminal output and only leave most important information
      - Compress "content", only keep the most important information, shorten it as much as possible
      - Compress top (older) messages more, then lower (newer) messages. Compress long assistant messages into maximum 3 sentences
      - Keep plan for the task as is (can be more than 3 sentences), make sure to preserve all messages that have requirements fully
 
-    Respond with compressed conversation_history without wrapping XML tag, in exactly the same JSON schema format as provided in the original, but summarized.
+    Respond with compressed conversation_history without wrapping XML tag, in exactly the same JSON schema format as provided in the original.
 
     <conversation_history>
     [
@@ -361,7 +364,7 @@ class ChatContextBuilder {
       const relevantFiles = await this.updateListOfRelevantFiles(fileContents);
       if (Array.isArray(relevantFiles)) {
         console.log('Reducing relevant files context', relevantFiles);
-        this.taskRelevantFiles = relevantFiles.slice(0, 10);
+        this.taskRelevantFiles = relevantFiles.slice(0, MAX_RELEVANT_FILES_COUNT);
         return await this.getFileContents(relevantFiles);
       }
     }
@@ -381,7 +384,7 @@ class ChatContextBuilder {
     Include only required files, exclude files that are already processed or most likely not needed.
     Respond with an array of file paths exactly as they appeared (do not shorten or change file paths) in the list above, separated by commas.
     If all files are relevant, respond with a list of all files.
-    Order files by importance, most important first.
+    Order the files by how much assistant still needs to know about them to complete the user's task, most important first.
     `;
 
     const format = {

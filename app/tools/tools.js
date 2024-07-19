@@ -11,25 +11,17 @@ const { generateDiff } = require('./code_diff');
 const toolDefinitions = [
   {
     name: 'create_or_overwrite_file',
-    description: 'Create or overwrite a file with new content. Try to create all requested files in a single step.',
+    description: 'Create or overwrite a file with new content',
     parameters: {
       type: 'object',
       properties: {
-        files: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              targetFile: {
-                type: 'string',
-                description: 'File path',
-              },
-              createText: {
-                type: 'string',
-                description: `Output the entire completed source code for a file in a single step. Always use correct indentation and new lines.`,
-              },
-            },
-          },
+        targetFile: {
+          type: 'string',
+          description: 'File path',
+        },
+        createText: {
+          type: 'string',
+          description: `Output the entire completed source code for a file in a single step. Always use correct indentation and new lines.`,
         },
       },
     },
@@ -39,36 +31,27 @@ const toolDefinitions = [
   },
   {
     name: 'replace_code',
-    description:
-      'Replace a portion of a file with new content. Try to make multiple replacements in a single step in different files, but not multiple replacements in a single file.',
+    description: 'Replace a portion of a file with new content',
     parameters: {
       type: 'object',
       properties: {
-        files: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              targetFile: {
-                type: 'string',
-                description: 'Path to the file to be modified.',
-              },
-              startLineNumber: {
-                type: 'integer',
-                description: 'The line number where the replacement should start (inclusive).',
-              },
-              endLineNumber: {
-                type: 'integer',
-                description:
-                  'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
-              },
-              replaceWith: {
-                type: 'string',
-                description:
-                  'New content to replace the specified lines. Ensure correct indentation for each new line of code inserted.',
-              },
-            },
-          },
+        targetFile: {
+          type: 'string',
+          description: 'Path to the file to be modified.',
+        },
+        startLineNumber: {
+          type: 'integer',
+          description: 'The line number where the replacement should start (inclusive).',
+        },
+        endLineNumber: {
+          type: 'integer',
+          description:
+            'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
+        },
+        replaceWith: {
+          type: 'string',
+          description:
+            'New content to replace the specified lines. Ensure correct indentation for each new line of code inserted.',
         },
       },
     },
@@ -82,16 +65,8 @@ const toolDefinitions = [
     parameters: {
       type: 'object',
       properties: {
-        files: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              targetFile: {
-                type: 'string',
-              },
-            },
-          },
+        targetFile: {
+          type: 'string',
         },
       },
     },
@@ -101,21 +76,12 @@ const toolDefinitions = [
   },
   {
     name: 'run_shell_command',
-    description:
-      'Run shell commands. If multilpe commands need to be run, provide list of commands in the order they should be run.',
+    description: 'Run shell commands',
     parameters: {
       type: 'object',
       properties: {
-        commands: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              command: {
-                type: 'string',
-              },
-            },
-          },
+        command: {
+          type: 'string',
         },
       },
     },
@@ -350,7 +316,7 @@ async function googleSearch({ query }) {
   let firstCompressedResult;
 
   for (const result of results) {
-    compressedResult = await contextualCompress(query, [result.content], [{ link: result.link }]);
+    compressedResult = await contextualCompress(query, result.content);
     if (!firstCompressedResult) firstCompressedResult = compressedResult;
 
     // return first result if it meets the condition
@@ -424,7 +390,7 @@ async function searchURL({ query, url }) {
       backendMessage: `Could not fetch content from ${url}`,
     };
   }
-  const compressedResult = await contextualCompress(query, [content], [{ link: url }]);
+  const compressedResult = await contextualCompress(query, content);
   return {
     frontendMessage: `Checked website:<br><a href="${url}" class="text-truncate ms-2">${url}</a>`,
     backendMessage: JSON.stringify(compressedResult),
