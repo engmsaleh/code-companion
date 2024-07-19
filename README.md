@@ -1,12 +1,25 @@
-# CodeCompanion.AI
+# 🤖 CodeCompanion.AI
 
-Welcome to CodeCompanion.AI, your personal coding assistant that helps you translate natural language instructions into code. This document will guide you through setting up the application, understanding its structure, and contributing to its development.
+CodeCompanion is an easy-to-use AI coding assistant desktop app.
 
-## Demo
+This app can help with many coding tasks. It's capable of searching codebases, searching the internet, running commands in the terminal and reading terminal output, editing existing or writing new code, has an unlimited context window, can create files and folders, execute code, and even deploy your code to production.
 
-https://github.com/codecompanion-ai/code-companion/assets/156543223/9990e7a8-a1ca-4172-8370-9befd49c7b6b
+## ✨ Features
 
-## Quick Start
+- Interactive chat interface with any of Claude or OpenAI models
+- Comprehensive file system operations (create folders, files, read/write files)
+- Web search capabilities
+- Semantic code search
+- Fully functional terminal
+- Preview and approve code changes
+- Or use fully automated mode
+- Unlimited context window
+- Dynamic context management to reduce token usage
+- Works with any size codebase
+- Save chat conversations
+- Custom instructions per project
+
+## 🚀 Quick Start
 
 To start using CodeCompanion desktop app, simply download it:
 
@@ -14,7 +27,20 @@ To start using CodeCompanion desktop app, simply download it:
 
 - [Download for Mac](https://codecompanion.s3.us-west-2.amazonaws.com/CodeCompanion.dmg)
 
-Or if you want to contribute or make changes to the code, please follow the instructions below:
+And install it as any other desktop app
+
+## Usage
+
+Once installed, add your OpenAI or Claude API key.
+Even if you just use Claude API, its recommended to add OpenAI API key for embeddings that are used for code search, google search and imrpoved dynamic context.
+
+Some prompt examples:
+
+- Refactor `app.js`, move some logic to a separate module
+- Create To Do app using JS, HTML and Tailwind
+- Undo last commit
+
+## Contributing:
 
 1. Clone the repository.
 2. Navigate to the project directory.
@@ -22,27 +48,6 @@ Or if you want to contribute or make changes to the code, please follow the inst
 4. The application has a dependency on `node-pty`. To install it, follow the instructions provided [here](https://github.com/microsoft/node-pty?tab=readme-ov-file#dependencies).
 
 5. Start the application with `npm start` or `npm run debug` for development mode.
-
-## Project Overview
-
-Here's an overview of the project's directory structure:
-
-- `build/`: Production-ready compiled files.
-- `app/`: Core application logic and functionality.
-- `styles/`: Styling and appearance of the application.
-- `index.html`: Main entry point for the UI.
-- `main.js`: Electron main process script.
-- `preload.js`: Pre-rendering script for the renderer process.
-- `renderer.js`: Electron renderer process script.
-- `scripts/`: Utility and build scripts.
-
-## Contributing
-
-Contributions are welcome! Please refer to `CONTRIBUTING.md` for contribution guidelines.
-
-## License
-
-CodeCompanion.AI is open-source software licensed under the MIT License. See `LICENSE.md` for more information.
 
 ## Community and Support
 
