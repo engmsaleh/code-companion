@@ -1,6 +1,7 @@
 const modelOptions = {
   'gpt-4-turbo': 'GPT-4 Turbo',
   'gpt-4o': 'GPT-4o',
+  'gpt-4o-mini': 'GPT-4o Mini',
   'gpt-4': 'GPT-4',
   'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet',
   'claude-3-opus-20240229': 'Claude 3 Opus',
