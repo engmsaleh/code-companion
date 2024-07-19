@@ -1,19 +1,17 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { log } = require('../utils');
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
 
 class AnthropicModel {
-  constructor({ model, apiKey, baseUrl, abortController, streamCallback }) {
+  constructor({ model, apiKey, baseUrl, streamCallback, chatController }) {
     this.model = model;
-    this.abortController = abortController;
+    this.chatController = chatController;
     const config = {
       apiKey: apiKey,
       maxRetries: MAX_RETRIES,
     };
-    this.options = {
-      signal: this.abortController.signal,
-    };
+    this.options = {};
     this.maxTokens = 4096;
     if (model === 'claude-3-5-sonnet-20240620') {
       this.maxTokens = 8192;
@@ -48,6 +46,7 @@ class AnthropicModel {
   async stream(callParams) {
     log('Calling model API:', callParams);
     let message = '';
+    this.options.signal = this.chatController.abortController.signal;
     const stream = this.client.messages.stream(callParams, this.options).on('text', (text) => {
       message += text;
       this.streamCallback(message);
@@ -68,6 +67,7 @@ class AnthropicModel {
   async toolUse(callParams, tool) {
     callParams.tools = [this.anthropicToolFormat(tool)];
     callParams.tool_choice = { type: 'tool', name: tool.name };
+    this.options.signal = this.chatController.abortController.signal;
 
     log('Calling model API:', callParams);
     const response = await this.client.messages.create(callParams, this.options);
@@ -88,30 +88,12 @@ class AnthropicModel {
 
     let parsedToolCalls = [];
     for (const toolCall of toolCalls) {
-      const functionName = toolCall.name;
-      const args = toolCall.input;
-      const firstArgKey = Object.keys(args)[0];
-      if (
-        args[firstArgKey] &&
-        Array.isArray(args[firstArgKey]) &&
-        args[firstArgKey].every((item) => typeof item === 'object' && item !== null)
-      ) {
-        for (const item of args[firstArgKey]) {
-          parsedToolCalls.push({
-            function: {
-              name: functionName,
-              arguments: item,
-            },
-          });
-        }
-      } else {
-        parsedToolCalls.push({
-          function: {
-            name: functionName,
-            arguments: args,
-          },
-        });
-      }
+      parsedToolCalls.push({
+        function: {
+          name: toolCall.name,
+          arguments: toolCall.input,
+        },
+      });
     }
     return parsedToolCalls;
   }
@@ -125,8 +107,8 @@ class AnthropicModel {
   }
 
   abort() {
-    this.abortController.abort();
-    this.abortController = new AbortController();
+    this.chatController.abortController.abort();
+    this.chatController.abortController = new AbortController();
   }
 }
 

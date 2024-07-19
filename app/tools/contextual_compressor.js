@@ -1,59 +1,32 @@
-const { OpenAI } = require('@langchain/openai');
-const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
-const { MemoryVectorStore } = require('langchain/vectorstores/memory');
-const { OpenAIEmbeddings } = require('@langchain/openai');
-const { ContextualCompressionRetriever } = require('langchain/retrievers/contextual_compression');
-const { LLMChainExtractor } = require('langchain/retrievers/document_compressors/chain_extract');
+async function contextualCompress(query, text) {
+  const prompt = `
+  Given the following query and text, extract the most relevant information that directly answers or relates to the query. Do not modify or paraphrase the extracted information. Maintain the original wording and context.
 
-const { CONTEXTUAL_COMPRESSION_MODEL_NAME, EMBEDDINGS_MODEL_NAME } = require('../static/models_config');
+  Query: ${query}
 
-async function contextualCompress(query, texts, metadatas = [], docsToRetrieve = 5) {
-  const openAIApiKey = chatController.settings.apiKey;
-  const model = new OpenAI({
-    openAIApiKey: openAIApiKey,
-    modelName: CONTEXTUAL_COMPRESSION_MODEL_NAME,
-    temperature: 0.2,
+  <text>
+  ${text}
+  </text>
+
+  Instructions:
+  1. Identify the parts of the text that are most relevant to the query.
+  2. Extract these relevant parts verbatim, without any modifications or paraphrasing.
+  3. If there are multiple relevant sections, include all of them.
+  4. Preserve the original context and wording of the extracted information.
+  5. If no information in the text is directly relevant to the query, respond with "No relevant information found."
+
+  Relevant information (extracted verbatim):
+  `;
+  const format = {
+    type: 'string',
+    result: 'Extracted information',
+  };
+  const result = await chatController.backgroundTask.run({
+    prompt,
+    format,
+    model: chatController.settings.selectedModel,
   });
-  const baseCompressor = LLMChainExtractor.fromLLM(model);
-  const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 4000,
-    chunkOverlap: 500,
-  });
-  const docs = await textSplitter.createDocuments(texts, metadatas);
-  docs.forEach((doc, index) => {
-    doc.metadata.index = index;
-  });
-
-  const vectorStore = await MemoryVectorStore.fromDocuments(
-    docs,
-    new OpenAIEmbeddings({
-      openAIApiKey,
-      modelName: EMBEDDINGS_MODEL_NAME,
-      maxRetries: 3,
-      timeout: 30 * 1000,
-    }),
-  );
-
-  const retriever = new ContextualCompressionRetriever({
-    baseCompressor,
-    baseRetriever: vectorStore.asRetriever(docsToRetrieve),
-  });
-  let results = await retriever.getRelevantDocuments(query);
-
-  results.sort((a, b) => a.metadata.index - b.metadata.index);
-
-  results = results.map((result) => {
-    return {
-      pageContent: result.pageContent,
-      link: result.metadata.link,
-    };
-  });
-
-  if (!results) {
-    return [];
-  }
-
-  return results;
+  return result ? result : text;
 }
 
 module.exports = {

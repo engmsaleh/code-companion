@@ -6,16 +6,19 @@ const modelOptions = {
   'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet',
   'claude-3-opus-20240229': 'Claude 3 Opus',
 };
-const defaultModel = 'gpt-4-turbo';
+
+const defaultModel = 'claude-3-5-sonnet-20240620';
+const defaultOpenAISmallModel = 'gpt-4o-mini';
+const defaultAnthropicSmallModel = 'claude-3-haiku-20240307';
 
 const EMBEDDINGS_VERSION = 'v1.9'; // when reindexing of code embedding is needed, update this version
 const EMBEDDINGS_MODEL_NAME = 'text-embedding-ada-002';
-const CONTEXTUAL_COMPRESSION_MODEL_NAME = 'gpt-3.5-turbo';
 
 module.exports = {
   modelOptions,
   defaultModel,
+  defaultOpenAISmallModel,
+  defaultAnthropicSmallModel,
   EMBEDDINGS_VERSION,
   EMBEDDINGS_MODEL_NAME,
-  CONTEXTUAL_COMPRESSION_MODEL_NAME,
 };
