@@ -285,10 +285,8 @@ class ChatController {
 
   async clearChat() {
     trackEvent(`new_chat`);
-    if (this.chat) {
-      this.chat.userDecision = 'reject';
-    }
     this.chat = new Chat();
+    this.agent = new Agent();
     this.initializeModel();
     this.chatLogs = [];
     this.agent.userDecision = null;
