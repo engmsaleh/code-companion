@@ -9,7 +9,7 @@ class ImageHandler {
     const mimeType = imageBuffer.getMIME();
     const base64Image = await imageBuffer.getBase64Async(mimeType);
 
-    return base64Image;
+    return { base64Image, mimeType };
   }
 
   async resizeImageIfNeeded(filePath) {

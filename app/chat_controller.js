@@ -257,7 +257,8 @@ class ChatController {
   }
 
   async processNewUserMessage(userMessage) {
-    if (this.chat.isEmpty()) {
+    // only submitted form UI
+    if (this.chat.isEmpty() || this.chat.onlyHasImages()) {
       this.chat.addTask(userMessage);
       document.getElementById('projectsCard').innerHTML = '';
       await this.process();
@@ -286,7 +287,7 @@ class ChatController {
   async clearChat() {
     trackEvent(`new_chat`);
     this.chat = new Chat();
-    this.agent = new Agent();
+    this.agent = new Agent(this.agent.projectController.currentProject);
     this.initializeModel();
     this.chatLogs = [];
     this.agent.userDecision = null;

@@ -61,7 +61,7 @@ const toolDefinitions = [
   },
   {
     name: 'read_file',
-    description: 'Read files',
+    description: 'Read files. Do not read files that are listed in the <relevant_files_contents> section.',
     parameters: {
       type: 'object',
       properties: {

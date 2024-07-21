@@ -41,7 +41,8 @@ class ChatContextBuilder {
     const lastUserMessage = this.addLastUserMessage(userMessage);
     const reflectMessageResult = this.addReflectMessage(reflectMessage);
     const relevantSourceCodeInformation = await this.relevantSourceCodeInformation();
-    const content = [
+
+    const textContent = [
       this.addTaskMessage(),
       conversationSummary,
       lastUserMessage,
@@ -50,18 +51,30 @@ class ChatContextBuilder {
     ]
       .filter(Boolean)
       .join('\n');
+
+    let content;
+
+    const imageMessages = this.getImageMessages();
+    if (imageMessages.length > 0) {
+      content = [...imageMessages, { type: 'text', text: textContent }];
+    } else {
+      content = textContent;
+    }
+
     return {
       role: 'user',
       content,
     };
   }
 
-  addImageMessages() {
+  getImageMessages() {
     const imageMessages = this.backendMessages.filter(
       (message) => Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url'),
     );
 
-    return imageMessages;
+    return imageMessages.map((message) => {
+      return message.content.find((content) => content.type === 'image_url');
+    });
   }
 
   async addSystemMessage() {
@@ -129,9 +142,12 @@ class ChatContextBuilder {
   async addSummaryOfMessages() {
     let allMessagesText = '';
     const backendMessages = this.chat.backendMessages;
+
+    // remove image data from content
     const preprocessedMessages = backendMessages.map((message) => {
-      if (Array.isArray(message.content) && message.content.some((content) => content.type === 'image_url')) {
-        return { ...message, content: 'image added to chat' };
+      if (Array.isArray(message.content)) {
+        const filteredContent = message.content.filter((content) => content.type !== 'image_url');
+        return { ...message, content: filteredContent };
       }
       return message;
     });
@@ -154,7 +170,7 @@ class ChatContextBuilder {
       });
     }
 
-    const lastNMessages = backendMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
+    const lastNMessages = preprocessedMessages.slice(-SUMMARIZE_MESSAGES_THRESHOLD);
     let messagesToAdd = lastNMessages.filter((message) => message.id > this.lastSummarizedMessageID);
     if (messagesToAdd.length > 0 && messagesToAdd[messagesToAdd.length - 1].role === 'user') {
       messagesToAdd.pop(); // Remove the last message if it's from a user
@@ -301,7 +317,7 @@ class ChatContextBuilder {
     fileContents = await this.reduceRelevantFilesContext(fileContents, relevantFileNames);
 
     return fileContents
-      ? `\n\nCurrent content of the files (no need to read these files again and dont say thank you for providing these files):\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>`
+      ? `\n\nCurrent content of the files (do not read these files again. Do not thank me for providing these files):\n<relevant_files_contents>${fileContents}\n</relevant_files_contents>`
       : '';
   }
 
