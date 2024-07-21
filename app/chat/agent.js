@@ -5,10 +5,10 @@ const { toolDefinitions, previewMessageMapping, getCodeToReplace } = require('..
 const { isFileExists, normalizedFilePath } = require('../utils');
 
 class Agent {
-  constructor() {
+  constructor(currentProject) {
     this.currentWorkingDir = os.homedir();
     this.projectState = {};
-    this.projectController = new ProjectController();
+    this.projectController = new ProjectController(currentProject);
     this.userDecision = null;
     this.lastToolCall = null;
   }

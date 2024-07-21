@@ -1,24 +1,33 @@
-const fileType = require('file-type').fromBuffer;
+const { fromBuffer } = require('file-type');
 const reader = require('any-text');
 const { isTextFile } = require('../utils');
 const ImageHandler = require('./image_handler');
+const fs = require('graceful-fs');
+const path = require('path');
 
 async function readFile(filepath) {
   try {
     const basename = path.basename(filepath);
-    const type = await fileType(filepath);
+    const buffer = fs.readFileSync(filepath);
+    const type = await fromBuffer(buffer);
+
     if (type && ['docx', 'doc', 'xlsx', 'xls', 'txt', 'csv', 'json'].includes(type.ext)) {
       return await reader.getText(filepath);
     }
 
     if (type && ['png', 'jpg', 'jpeg', 'gif'].includes(type.ext)) {
       const imageHandler = new ImageHandler();
-      const base64Image = await imageHandler.imageToBase64(filepath);
+      const { base64Image, mimeType } = await imageHandler.imageToBase64(filepath);
       const content = [
+        {
+          type: 'text',
+          text: `Attaching image: ${basename}`,
+        },
         {
           type: 'image_url',
           image_url: {
             url: base64Image,
+            media_type: mimeType,
           },
         },
       ];
@@ -34,7 +43,7 @@ async function readFile(filepath) {
     if (isTextFile(filepath)) {
       chatController.chat.addFrontendMessage(
         'error',
-        `Don't upload code files directly. Open project where this file is located, and then ask a question about this file.`,
+        `Don't upload code files directly. Open project where this file is located.`,
       );
       console.error(`File was uploaded directly: ${basename}`);
       return null;

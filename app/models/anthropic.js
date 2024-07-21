@@ -30,7 +30,7 @@ class AnthropicModel {
     const callParams = {
       model: model || this.model,
       system: system ? system.content : null,
-      messages: messages.filter((message) => message.role !== 'system'),
+      messages: this.formatUserMessages(messages),
       temperature,
       max_tokens: this.maxTokens,
     };
@@ -41,6 +41,36 @@ class AnthropicModel {
       response = await this.stream(callParams);
     }
     return response;
+  }
+
+  formatUserMessages(messages) {
+    const userMessages = messages.filter((message) => message.role === 'user');
+    return userMessages.map((message) => {
+      if (Array.isArray(message.content)) {
+        return {
+          role: 'user',
+          content: message.content.map((item) => {
+            if (item.type === 'image_url') {
+              return this.formatImageUrlContent(item);
+            }
+            return item;
+          }),
+        };
+      }
+      // If content is not an array, return the message as is
+      return message;
+    });
+  }
+
+  formatImageUrlContent(item) {
+    return {
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: item.image_url.media_type,
+        data: item.image_url.url.split(',')[1], // Remove the "data:image/jpeg;base64," prefix
+      },
+    };
   }
 
   async stream(callParams) {

@@ -21,6 +21,16 @@ class Chat {
     return this.backendMessages.length === 0;
   }
 
+  onlyHasImages() {
+    return this.backendMessages.every((message) => {
+      if (Array.isArray(message.content)) {
+        return message.content.some((item) => item.type === 'image_url');
+      } else {
+        return false; // If content is not an array, it's not an image message
+      }
+    });
+  }
+
   getNextId() {
     this.currentId += 1;
     return this.currentId;

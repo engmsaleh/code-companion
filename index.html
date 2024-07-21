@@ -1,5 +1,5 @@
 <!doctype html>
-<html data-bs-theme="dark" class="h-100">
+<html data-bs-theme="dark" ondragover="event.preventDefault();" ondragleave="event.preventDefault();" ondrop="handleDrop(event);" class="h-100">
   <head>
     <meta charset="UTF-8" />
     <title>CodeCompanion.AI</title>
@@ -105,6 +105,12 @@
         <div>
           <div class="d-flex align-items-end ms-1 bottom-0 bg-body p-3">
             <div class="d-flex position-relative flex-grow-1">
+              <div>
+                <button class="btn shadow-none btn-sm text-decoration-none me-1" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
+                  <i class="bi bi-image bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload an image"></i>
+                </button>
+              </div>
+
               <textarea
                 rows="1"
                 class="form-control form-control-lg bg-body-secondary border-0 shadow-none autosize-textarea flex-grow-1"
@@ -129,12 +135,6 @@
             >
               <i class="bi bg-body border-0 bi-stop-circle"></i>
             </button>
-
-            <!-- <div>
-              <button class="btn shadow-none btn-sm text-decoration-none" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
-                <i class="bi bi-paperclip bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload a file"></i>
-              </button>
-            </div> -->
           </div>
         </div>
 

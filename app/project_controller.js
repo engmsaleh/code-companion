@@ -11,16 +11,19 @@ const LARGE_FILE_SIZE = 50000;
 const addInstructionsModal = new bootstrap.Modal(document.getElementById('addInstructionsModal'));
 
 class ProjectController {
-  constructor() {
+  constructor(currentProject) {
     this.getProjects();
-    this.currentProject = null;
+    this.openProject(currentProject?.path);
     this.filesList = [];
     this.traverseDirectory = this.traverseDirectory.bind(this);
   }
 
   openProject(path) {
+    if (!path) {
+      this.currentProject = null;
+      return;
+    }
     this.embeddings = null;
-    this.currentProject = null;
     this.filesList = [];
 
     if (!fs.existsSync(path)) {
