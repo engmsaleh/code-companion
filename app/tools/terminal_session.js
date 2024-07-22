@@ -4,7 +4,6 @@ const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
 const { WebLinksAddon } = require('xterm-addon-web-links');
 const { Unicode11Addon } = require('xterm-addon-unicode11');
-const interact = require('interactjs');
 const { ipcRenderer, shell } = require('electron');
 const { debounce } = require('lodash');
 const { withTimeout, log } = require('../utils');
@@ -76,12 +75,6 @@ class TerminalSession {
     this.terminal.loadAddon(new Unicode11Addon());
     this.terminal.unicode.activeVersion = '11';
 
-    // set terminal height to last saved value
-    const terminalOutputHeight = localStorage.get('terminalOutputHeight');
-    if (terminalOutputHeight) {
-      document.querySelector('#terminal_output').style.height = `${terminalOutputHeight}px`;
-    }
-
     ipcRenderer.send('start-shell', {
       cwd: chatController.agent.currentWorkingDir,
     });
@@ -128,33 +121,19 @@ class TerminalSession {
   }
 
   resizeTerminalWindow() {
-    if (this.terminal) {
-      this.fitAddon.fit();
-      ipcRenderer.send('resize-shell', {
-        cols: this.terminal.cols,
-        rows: this.terminal.rows,
-      });
-    }
+    setTimeout(() => {
+      if (this.terminal) {
+        this.fitAddon.fit();
+        ipcRenderer.send('resize-shell', {
+          cols: this.terminal.cols,
+          rows: this.terminal.rows,
+        });
+      }
+    }, 400);
   }
 
   handleTerminalResize() {
-    this.terminalOutput = document.querySelector('#terminal_output');
     this.debounceResizeTerminalWindow = debounce(this.resizeTerminalWindow.bind(this), 200);
-
-    interact('#terminal_resize_handle').draggable({
-      cursorChecker() {
-        return 'ns-resize';
-      },
-      lockAxis: 'y',
-      listeners: {
-        move: (event) => {
-          const newHeight = parseInt(window.getComputedStyle(this.terminalOutput).height) - event.dy;
-          this.terminalOutput.style.height = `${newHeight}px`;
-          localStorage.set('terminalOutputHeight', newHeight);
-          this.debounceResizeTerminalWindow();
-        },
-      },
-    });
   }
 
   interruptShellSession() {
@@ -205,6 +184,8 @@ class TerminalSession {
   }
 
   async executeShellCommand(command) {
+    viewController.activateTab('shell-tab');
+    this.resizeTerminalWindow();
     return new Promise((resolve, reject) => {
       this.outputData = '';
 

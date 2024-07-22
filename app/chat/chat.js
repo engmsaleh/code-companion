@@ -41,19 +41,19 @@ class Chat {
     this.renderTask();
     await this.createTaskTitle();
     this.renderTask();
+    viewController.activateTab('task-tab');
   }
 
   renderTask() {
     if (!this.task) {
-      document.getElementById('taskTitle').innerHTML = 'Provide task details below...';
-      document.getElementById('taskSection').hidden = true;
+      document.getElementById('taskTitle').innerText = '';
+      document.getElementById('taskContainer').innerHTML = '';
       return;
     }
 
     const taskTitle =
       this.taskTitle || this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : '');
     document.getElementById('taskTitle').innerText = taskTitle;
-    document.getElementById('taskSection').hidden = false;
     document.getElementById('taskContainer').innerHTML = this.task;
     document.getElementById('messageInput').setAttribute('placeholder', 'Send message...');
   }

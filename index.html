@@ -1,56 +1,60 @@
 <!doctype html>
-<html data-bs-theme="dark" ondragover="event.preventDefault();" ondragleave="event.preventDefault();" ondrop="handleDrop(event);" class="h-100">
-  <head>
-    <meta charset="UTF-8" />
-    <title>CodeCompanion.AI</title>
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="img-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; style-src-elem * 'unsafe-inline'"
-    />
-    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css" />
-    <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark-dimmed.css" />
-    <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
-    <link rel="stylesheet" href="node_modules/diff2html/bundles/css/diff2html.min.css" />
-    <link rel="stylesheet" href="styles/styles.css" />
-    <base target="_blank" />
-  </head>
+<html data-bs-theme="dark" ondragover="event.preventDefault();" ondragleave="event.preventDefault();"
+  ondrop="handleDrop(event);" class="h-100">
 
-  <body class="d-flex flex-column h-100">
-    <header class="py-2 fixed-top bg-body border-bottom">
-      <div class="d-flex justify-content-center align-items-center mb-1">
-        <button class="btn btn-lnk mx-1" type="button" id="settingsToggle" data-bs-toggle="offcanvas" data-bs-target="#settingsMenu">
+<head>
+  <meta charset="UTF-8" />
+  <title>CodeCompanion.AI</title>
+  <meta http-equiv="Content-Security-Policy"
+    content="img-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; style-src-elem * 'unsafe-inline'" />
+  <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark-dimmed.css" />
+  <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+  <link rel="stylesheet" href="node_modules/diff2html/bundles/css/diff2html.min.css" />
+  <link rel="stylesheet" href="styles/styles.css" />
+  <base target="_blank" />
+</head>
+
+<body class="d-flex flex-column">
+  <header class="py-2 bg-body border-bottom fixed-top">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex justify-content-start align-items-center w-50">
+        <button class="btn btn-lnk mx-1" type="button" id="settingsToggle" data-bs-toggle="offcanvas"
+          data-bs-target="#settingsMenu">
           <i class="bi bi-gear" data-bs-toggle="tooltip" data-bs-title="Settings"></i>
         </button>
-        <div class="d-flex align-items-center mx-3 ms-auto">
-          <label for="modelDropdown" class="form-label mx-1 mb-0">Model:</label>
-          <select class="form-select form-select-sm" id="selectedModel" onchange="chatController.saveSetting('selectedModel')" style="width: auto"></select>
+        <div class="d-flex justify-content-center align-items-center w-100 align-items-center text-nowrap">
+          <label for="selectedModel" class="form-label mx-1 mb-0">Model:</label>
+          <select class="form-select form-select-sm" id="selectedModel"
+            onchange="chatController.saveSetting('selectedModel')" style="width: auto"></select>
+          <div class="form-check form-switch ms-3">
+            <input class="form-check-input" type="checkbox" id="approvalRequired"
+              onchange="chatController.saveSetting('approvalRequired')" />
+            <label class="form-check-label" for="approvalRequired">Require approval</label>
+            <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right"
+              title="Require approval for actions that make changes, such as writing files or executing commands."></i>
+          </div>
         </div>
-        <div class="form-check form-switch me-auto">
-          <input class="form-check-input" type="checkbox" id="approvalRequired" onchange="chatController.saveSetting('approvalRequired')">
-          <label class="form-check-label" for="approvalToggle">Require approval</label>
-          <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right" title="Require approval for actions that make changes, such as writing files or executing commands."></i>
-        </div>
-        
+      </div>
+      <div class="d-flex align-items-center">
+        <span id="footerMessage" class="text-secondary text-truncate small m-2 text-end">App is up to date</span>
         <button class="btn btn-lnk" type="button" onclick="chatController.chat.history.showModal();">
           <i class="bi bi-floppy" data-bs-toggle="tooltip" data-bs-title="Save to history (Cmd/Ctrl + S)"></i>
         </button>
-        <button
-          class="btn btn-lnk"
-          type="button"
-          id="settingsToggle"
-          data-bs-toggle="offcanvas"
-          data-bs-target="#historyMenu"
-          onclick="chatController.chat.history.load();"
-        >
+        <button class="btn btn-lnk" type="button" id="historyToggle" data-bs-toggle="offcanvas"
+          data-bs-target="#historyMenu" onclick="chatController.chat.history.load();">
           <i class="bi bi-clock-history" data-bs-toggle="tooltip" data-bs-title="Chat history"></i>
         </button>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="flex-shrink-0 pt-5">
-      <div>
-        <div id="search_result_container" class="mx-3 mt-4 mb-5 flex-grow-1 pb-5">
+  <div class="container-fluid flex-grow-1 p-0">
+    <div class="row g-0 mt-5">
+      <!-- Left panel -->
+      <div id="leftPanel" class="col">
+        <div id="chat_history_container" class="px-3 overflow-y-auto" style="height: calc(100vh - 120px);">
           <div id="projectsCard" class="m-2"></div>
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
@@ -76,230 +80,291 @@
             <span class="ms-3 text-secondary small" id="loadingMessage"></span>
           </div>
         </div>
-      </div>
-    </main>
 
-    <footer class="footer mt-auto sticky-bottom bg-body">
-      <div>
-        <div id="taskSection" hidden>
-          <div class="d-flex border-top align-items-start pt-2">
-            <div class="flex-grow-1 accordion accordion-flush me-2" id="taskAccordion">
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="headingTask">
-                  <button class="accordion-button collapsed py-1 text-truncate" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTask" aria-expanded="false" aria-controls="collapseTask">
-                    <span class="fw-bold me-3">Task:</span><span id="taskTitle">Provide task details below...</span> 
-                  </button>
-                </h2>
-                <div id="collapseTask" class="accordion-collapse collapse" aria-labelledby="headingTask" data-bs-parent="#taskAccordion">
-                  <div class="accordion-body" id="taskContainer"></div>
-                </div>
-              </div>
-            </div>
-            
-            <button class="btn btn-sm btn-primary me-2 text-nowrap" type="button" id="clearChat" onclick="chatController.clearChat()">
-              <i class="bi bi-pencil-square border-0" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="New task (Cmd/Ctrl+N)"></i> New task
+        <div class="bg-body px-3 sticky-bottom mt-auto">
+          <div class="d-flex align-items-end ms-1 bottom-0 bg-body py-3">
+            <button class="btn shadow-none btn-sm text-decoration-none me-1" type="button" id="openFileBtn"
+              onclick="viewController.openFileDialogue()">
+              <i class="bi bi-image bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip"
+                data-bs-title="Upload an image"></i>
             </button>
-          </div>
-        </div>
 
-        <div>
-          <div class="d-flex align-items-end ms-1 bottom-0 bg-body p-3">
             <div class="d-flex position-relative flex-grow-1">
-              <div>
-                <button class="btn shadow-none btn-sm text-decoration-none me-1" type="button" id="openFileBtn" onclick="viewController.openFileDialogue()">
-                  <i class="bi bi-image bg-body border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Upload an image"></i>
-                </button>
-              </div>
-
-              <textarea
-                rows="1"
+              <textarea rows="1"
                 class="form-control form-control-lg bg-body-secondary border-0 shadow-none autosize-textarea flex-grow-1"
-                id="messageInput"
-                placeholder="Provide task details..."
-                autofocus
-                style="padding-right: 50px"
-              ></textarea>
+                id="messageInput" placeholder="Provide task details..." autofocus
+                style="padding-right: 50px"></textarea>
 
-              <button class="btn btn-sm d-flex position-absolute bottom-0" type="button" id="clearChat" onclick="chatController.submitMessage()" style="right: 10px; bottom: 10px">
-                <i class="bi bi-send bg-body-secondary border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip" data-bs-title="Submit"></i>
+              <button class="btn btn-sm d-flex position-absolute bottom-0" type="button" id="clearChat"
+                onclick="chatController.submitMessage()" style="right: 10px; bottom: 10px">
+                <i class="bi bi-send bg-body-secondary border-0" style="font-size: 1.5rem" data-bs-toggle="tooltip"
+                  data-bs-title="Submit"></i>
               </button>
             </div>
 
-            <button
-              class="btn btn-lg border-0 d-flex align-items-center"
-              type="button"
-              id="requestStopProcess"
-              data-bs-toggle="tooltip"
-              data-bs-title="Interrupt process (Ctrl + C)"
-              onclick="chatController.requestStopProcess();"
-            >
+            <button class="btn btn-lg border-0 d-flex align-items-center" type="button"
+              onclick="chatController.clearChat()" data-bs-toggle="tooltip" data-bs-title="New task (Cmd/Ctrl+N)">
+              <i class="bi bi-pencil-square border-0"></i>
+            </button>
+            <button class="btn btn-lg border-0 d-flex align-items-center" type="button" id="requestStopProcess"
+              data-bs-toggle="tooltip" data-bs-title="Interrupt process (Ctrl + C)"
+              onclick="chatController.requestStopProcess();">
               <i class="bi bg-body border-0 bi-stop-circle"></i>
             </button>
           </div>
         </div>
+      </div>
 
-        <div class="border-top pb-2 bg-dark-subtle" id="terminal_container">
-          <div id="terminal_resize_handle"></div>
-          <div>
-            <button class="btn shadow-none btn-sm mx-1 border-0" data-bs-toggle="collapse" href="#terminal_output" role="button" aria-expanded="true">
-              <i class="bi bi-chevron-down"></i> TERMINAL
+      <!-- Resize handle -->
+      <div id="resize_handle" class="col-auto"></div>
+
+      <!-- Right panel -->
+      <div id="rightPanel" class="col px-3">
+        <ul class="nav nav-tabs nav-justified mt-3" id="rightPanelTabs" role="tablist">
+          <li class="nav-item active" role="presentation">
+            <button class="nav-link active text-nowrap" id="task-tab" data-bs-toggle="tab" data-bs-target="#task" type="button"
+              role="tab" aria-controls="task" aria-selected="true">
+              <i class="bi bi-list-task me-2"></i>
+              <span class="px-1">Task</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap" id="shell-tab" data-bs-toggle="tab" data-bs-target="#shell" type="button"
+              role="tab" aria-controls="shell" aria-selected="false"
+              onclick="chatController.terminalSession.resizeTerminalWindow()">
+              <i class="bi bi-terminal me-2"></i>
+              <span class="px-1">Shell</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap" id="browser-tab" data-bs-toggle="tab" data-bs-target="#browser" type="button"
+              role="tab" aria-controls="browser" aria-selected="false">
+              <i class="bi bi-globe me-2"></i>
+              <span class="px-1">Browser</span>
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content border border-top-0 mb-3" id="rightPanelTabContent"
+          style="height: calc(100vh - 120px);">
+          <div class="tab-pane show active fade p-3" id="task" role="tabpanel" aria-labelledby="task-tab">
+            <h3 id="taskTitle"></h3>
+            <div id="taskContainer"></div>
+          </div>
+          <div class="tab-pane fade h-100" id="shell" role="tabpanel" aria-labelledby="shell-tab">
+            <div id="terminal_output" class="h-100"></div>
+          </div>
+          <div class="tab-pane fade h-100" id="browser" role="tabpanel" aria-labelledby="browser-tab">
+            <div class="border-bottom d-flex align-items-center p-2">
+              <button class="btn btn-sm btn-link-secondary me-1" onclick="document.querySelector('webview').goBack();"
+                data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <button class="btn btn-sm btn-link-secondary me-1"
+                onclick="document.querySelector('webview').goForward();" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Forward">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+              <button class="btn btn-sm btn-link-secondary me-1" onclick="document.querySelector('webview').reload();"
+                data-bs-toggle="tooltip" data-bs-placement="bottom" title="Reload">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+              <input type="text" class="form-control form-control-sm border-0" id="urlInput"
+                placeholder="Enter URL, eg. http://localhost:3000/"
+                onkeydown="if (event.key === 'Enter') { let url = this.value; if (!url.startsWith('http') && !url.startsWith('file')) { url = 'http://' + url; } document.querySelector('webview').src = url; }">
+              <button class="btn btn-sm btn-link-secondary ms-auto"
+                onclick="document.querySelector('webview').openDevTools();" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Dev tools">
+                <i class="bi bi-bug"></i>
+              </button>
+            </div>
+            <div id="webviewContainer" class="h-100 d-flex flex-column justify-content-center align-items-center">
+              <div id="browserMessage" class="w-50 text-center">
+                <p class="text-secondary">CodeCompanion can use built-in browser to preview results, get errors from the
+                  browser console or to take a screenshot of the page and use it to resolve any bugs or issues.</p>
+              </div>
+              <webview id="browserWebview" style="width:100%; height:100%; display:none;" src="about:blank"></webview>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings side bars and modals -->
+  <div id="settingsMenu" class="offcanvas offcanvas-start" tabindex="-1" style="width: 310px">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Settings</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <label for="apiKey" class="form-label mt-4">OpenAI API Key:</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="apiKey" placeholder="Your API Key" />
+        <button class="btn btn-outline-secondary" type="button" id="saveApiKey"
+          onclick="chatController.saveSetting('apiKey');">
+          Save
+        </button>
+      </div>
+
+      <label for="anthropicApiKey" class="form-label mt-4">Anthropic API Key:</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="anthropicApiKey" placeholder="Anthropic API Key" />
+        <button class="btn btn-outline-secondary" type="button" id="saveAnthropicApiKey"
+          onclick="chatController.saveSetting('anthropicApiKey');">
+          Save
+        </button>
+      </div>
+
+      <label for="apiKey" class="form-label mt-4">API Endpoint URL:</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="baseUrl" placeholder="Optional" />
+        <button class="btn btn-outline-secondary" type="button" id="saveBaseURL"
+          onclick="chatController.saveSetting('baseUrl')">
+          Save
+        </button>
+      </div>
+
+      <label for="maxFilesToEmbed" class="form-label mt-4">Max files to index (Code search):</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="maxFilesToEmbed" placeholder="For vector embeddings" />
+        <button class="btn btn-outline-secondary" type="button" id="saveMaxFilesToEmbed"
+          onclick="chatController.saveSetting('maxFilesToEmbed');">
+          Save
+        </button>
+      </div>
+
+      <label for="commandToOpenFile" class="form-label mt-4">Command to open a file in IDE:</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="commandToOpenFile" placeholder="Example: 'code' to open VS Code" />
+        <button class="btn btn-outline-secondary" type="button"
+          onclick="chatController.saveSetting('commandToOpenFile');">
+          Save
+        </button>
+      </div>
+
+      <div>
+        <label for="themeDropdown" class="form-label mt-4">Theme:</label>
+        <select class="form-select w-100" id="theme" onchange="viewController.changeTheme(this.value)"
+          style="width: auto">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label mt-4">Feedback:</label>
+        <div>hello@codecompanion.ai</div>
+
+        <div class="d-flex justify-content-start">
+          <a href="https://www.codecompanion.ai/" target="_blank" class="me-3">CodeCompanion.AI</a>
+          <a href="https://www.x.com/codecompanionai" target="_blank" class="me-3">
+            <i class="bi bi-twitter"></i>
+          </a>
+          <a href="https://www.discord.com/invite/qcTqDgqy6R" target="_blank">
+            <i class="bi bi-discord"></i>
+          </a>
+        </div>
+      </div>
+      <div>
+        <label class="form-label mt-4">App Version:</label>
+        <div>
+          <span id="appVersion"></span> (Beta)
+          <a href="https://www.codecompanion.ai/releases" target="_blank">What's new?</a>
+        </div>
+      </div>
+      <div class="mt-3">
+        <a href="https://www.codecompanion.ai/privacy">Privacy Policy</a>
+        |
+        <a href="https://www.codecompanion.ai/terms">Terms</a>
+      </div>
+    </div>
+  </div>
+  <!-- EOF Settings side bar -->
+
+  <!-- History sidepanel -->
+  <div id="historyMenu" class="offcanvas offcanvas-end" tabindex="-1" style="width: 310px">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Chat history</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="chatHistory">Loading...</div>
+  </div>
+  <!-- EOF History -->
+
+  <div class="modal" tabindex="-1" id="addInstructionsModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="saveChatForm"
+          onsubmit="event.preventDefault(); chatController.agent.projectController.saveInstructions();">
+          <div class="modal-header">
+            <h5 class="modal-title">Add Custom Instructions</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <textarea class="form-control my-2" id="customInstructions"
+              placeholder="Add instructions on what technologies and frameworks to use, file formatting or any other instructions or project description. Example: Only use Bootstrap for UI."
+              rows="4"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary"
+              onclick="chatController.agent.projectController.saveInstructions();">
+              Save
             </button>
           </div>
-          <div id="terminal_output" class="collapse show mx-2"></div>
-        </div>
-        
-        <div id="footerMessage" class="text-secondary text-truncate small m-2 text-end">App is up to date</div>
+        </form>
       </div>
-    </footer>
+    </div>
+  </div>
 
-    <!-- Settings side bars and modals -->
-    <div id="settingsMenu" class="offcanvas offcanvas-start" tabindex="-1" style="width: 310px">
-      <div class="offcanvas-header">
-        <h5 class="offcanvas-title">Settings</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-      </div>
-      <div class="offcanvas-body">
-        <label for="apiKey" class="form-label mt-4">OpenAI API Key:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="apiKey" placeholder="Your API Key" />
-          <button class="btn btn-outline-secondary" type="button" id="saveApiKey" onclick="chatController.saveSetting('apiKey');">Save</button>
-        </div>
-
-        <label for="anthropicApiKey" class="form-label mt-4">Anthropic API Key:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="anthropicApiKey" placeholder="Anthropic API Key" />
-          <button class="btn btn-outline-secondary" type="button" id="saveAnthropicApiKey" onclick="chatController.saveSetting('anthropicApiKey');">Save</button>
-        </div>
-
-        <label for="apiKey" class="form-label mt-4">API Endpoint URL:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="baseUrl" placeholder="Optional" />
-          <button class="btn btn-outline-secondary" type="button" id="saveBaseURL" onclick="chatController.saveSetting('baseUrl')">Save</button>
-        </div>
-
-        <label for="maxFilesToEmbed" class="form-label mt-4">Max files to index (Code search):</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="maxFilesToEmbed" placeholder="For vector embeddings" />
-          <button class="btn btn-outline-secondary" type="button" id="saveMaxFilesToEmbed" onclick="chatController.saveSetting('maxFilesToEmbed');">Save</button>
-        </div>
-
-        <label for="commandToOpenFile" class="form-label mt-4">Command to open a file in IDE:</label>
-        <div class="input-group">
-          <input type="text" class="form-control" id="commandToOpenFile" placeholder="Example: 'code' to open VS Code" />
-          <button class="btn btn-outline-secondary" type="button" onclick="chatController.saveSetting('commandToOpenFile');">Save</button>
-        </div>
-
-        <div>
-          <label for="themeDropdown" class="form-label mt-4">Theme:</label>
-          <select class="form-select w-100" id="theme" onchange="viewController.changeTheme(this.value)" style="width: auto">
-            <option value="dark" selected>Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="form-label mt-4">Feedback:</label>
-          <div>hello@codecompanion.ai</div>
-          
-          <div class="d-flex justify-content-start">
-            <a href="https://www.codecompanion.ai/" target="_blank" class="me-3">CodeCompanion.AI</a>
-            <a href="https://www.x.com/codecompanionai" target="_blank" class="me-3">
-              <i class="bi bi-twitter"></i>
-            </a>
-            <a href="https://www.discord.com/invite/qcTqDgqy6R" target="_blank">
-              <i class="bi bi-discord"></i>
-            </a>
+  <div class="modal" tabindex="-1" id="saveChatModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="saveChatForm" onsubmit="event.preventDefault(); chatController.chat.history.save();">
+          <div class="modal-header">
+            <h5 class="modal-title">Save chat to history</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-        </div>
-        <div>
-          <label class="form-label mt-4">App Version:</label>
-          <div>
-            <span id="appVersion"></span> (Beta)
-            <a href="https://www.codecompanion.ai/releases" target="_blank">What's new?</a>
+          <div class="modal-body">
+            <input type="text" class="form-control my-2" id="chatTitle" placeholder="Chat title..." />
           </div>
-        </div>
-        <div class="mt-3">
-          <a href="https://www.codecompanion.ai/privacy">Privacy Policy</a>
-          |
-          <a href="https://www.codecompanion.ai/terms">Terms</a>
-        </div>
-      </div>
-    </div>
-    <!-- EOF Settings side bar -->
-
-    <!-- History sidepanel -->
-    <div id="historyMenu" class="offcanvas offcanvas-end" tabindex="-1" style="width: 310px">
-      <div class="offcanvas-header">
-        <h5 class="offcanvas-title">Chat history</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-      </div>
-      <div class="offcanvas-body" id="chatHistory">Loading...</div>
-    </div>
-    <!-- EOF History -->
-
-    <div class="modal" tabindex="-1" id="addInstructionsModal">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <form id="saveChatForm" onsubmit="event.preventDefault(); chatController.agent.projectController.saveInstructions();">
-            <div class="modal-header">
-              <h5 class="modal-title">Add Custom Instructions</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <textarea class="form-control my-2" id="customInstructions" placeholder="Add instructions on what technologies and frameworks to use, file formatting or any other instructions or project description. Example: Only use Bootstrap for UI." rows="4"></textarea>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary" onclick="chatController.agent.projectController.saveInstructions();">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal" tabindex="-1" id="saveChatModal">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <form id="saveChatForm" onsubmit="event.preventDefault(); chatController.chat.history.save();">
-            <div class="modal-header">
-              <h5 class="modal-title">Save chat to history</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <input type="text" class="form-control my-2" id="chatTitle" placeholder="Chat title..." />
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary" onclick="chatController.chat.history.save()">Save</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal" tabindex="-1" id="helpMessage">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Tips</h5>
-              <button type="button" class="btn-close" onclick="onboardingController.markAsRead()" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <div id="helpMessageContent"></div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-primary" onclick="onboardingController.markAsRead()">Close</button>
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" id="saveSelectedSchemasButton" class="btn btn-primary"
+              onclick="chatController.chat.history.save()">
+              Save
+            </button>
           </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" tabindex="-1" id="helpMessage">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tips</h5>
+          <button type="button" class="btn-close" onclick="onboardingController.markAsRead()"
+            aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="helpMessageContent"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="onboardingController.markAsRead()">Close</button>
         </div>
       </div>
     </div>
+  </div>
+  </div>
 
-    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="renderer.js"></script>
-    <script>
-      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-      const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
-    </script>
-  </body>
+  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="renderer.js"></script>
+  <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
+  </script>
+</body>
+
 </html>

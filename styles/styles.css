@@ -25,11 +25,12 @@ pre {
   overflow-x: hidden !important;
 }
 
-#terminal_resize_handle {
-  height: 3px;
+#resize_handle {
+  width: 3px;
+  background-color: var(--bs-border-color);
 }
 
-#terminal_resize_handle:hover {
+#resize_handle:hover {
   background-color: var(--bs-link-hover-color);
 }
 
@@ -50,4 +51,9 @@ pre {
   src: url('./fonts/FiraCodeNerdFont-Bold.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
+}
+
+/* diff2html fix for line number overflow bug */
+.d2h-code-side-linenumber {
+  position: relative;
 }

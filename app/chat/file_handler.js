@@ -34,7 +34,7 @@ async function readFile(filepath) {
       chatController.chat.addBackendMessage('user', content);
       chatController.chat.addFrontendMessage(
         'file',
-        `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3" alt="image preview" style="max-height: 200px;"></div>`,
+        `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3" alt="image preview" style="max-height: 250px;"></div>`,
       );
 
       return null;
