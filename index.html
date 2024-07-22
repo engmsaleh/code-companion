@@ -139,7 +139,7 @@
           <li class="nav-item" role="presentation">
             <button class="nav-link text-nowrap" id="browser-tab" data-bs-toggle="tab" data-bs-target="#browser" type="button"
               role="tab" aria-controls="browser" aria-selected="false">
-              <i class="bi bi-globe me-2"></i>
+              <span id="browserIcon"><i class="bi bi-globe me-2"></i></span>
               <span class="px-1">Browser</span>
             </button>
           </li>
@@ -155,34 +155,41 @@
           </div>
           <div class="tab-pane fade h-100" id="browser" role="tabpanel" aria-labelledby="browser-tab">
             <div class="border-bottom d-flex align-items-center p-2">
-              <button class="btn btn-sm btn-link-secondary me-1" onclick="document.querySelector('webview').goBack();"
+              <button class="btn btn-sm btn-link-secondary me-1" onclick="chatController.browser.goBack();"
                 data-bs-toggle="tooltip" data-bs-placement="bottom" title="Back">
                 <i class="bi bi-chevron-left"></i>
               </button>
               <button class="btn btn-sm btn-link-secondary me-1"
-                onclick="document.querySelector('webview').goForward();" data-bs-toggle="tooltip"
+                onclick="chatController.browser.goForward();" data-bs-toggle="tooltip"
                 data-bs-placement="bottom" title="Forward">
                 <i class="bi bi-chevron-right"></i>
               </button>
-              <button class="btn btn-sm btn-link-secondary me-1" onclick="document.querySelector('webview').reload();"
+              <button class="btn btn-sm btn-link-secondary me-1" onclick="chatController.browser.reload();"
                 data-bs-toggle="tooltip" data-bs-placement="bottom" title="Reload">
                 <i class="bi bi-arrow-clockwise"></i>
               </button>
               <input type="text" class="form-control form-control-sm border-0" id="urlInput"
                 placeholder="Enter URL, eg. http://localhost:3000/"
-                onkeydown="if (event.key === 'Enter') { let url = this.value; if (!url.startsWith('http') && !url.startsWith('file')) { url = 'http://' + url; } document.querySelector('webview').src = url; }">
+              >
               <button class="btn btn-sm btn-link-secondary ms-auto"
-                onclick="document.querySelector('webview').openDevTools();" data-bs-toggle="tooltip"
+                onclick="chatController.browser.handleSreenshot();" data-bs-toggle="tooltip"
+                data-bs-placement="bottom" title="Send screenshot to Chat">
+                <i class="bi bi-image ms-2"></i>
+              </button>
+              <button class="btn btn-sm btn-link-secondary ms-auto"
+                onclick="chatController.browser.openDevTools();" data-bs-toggle="tooltip"
                 data-bs-placement="bottom" title="Dev tools">
-                <i class="bi bi-bug"></i>
+                <span id="browserDevToolsIcon" class="text-nowrap"><i class="bi bi-bug ms-2"></i></span>
               </button>
             </div>
-            <div id="webviewContainer" class="h-100 d-flex flex-column justify-content-center align-items-center">
-              <div id="browserMessage" class="w-50 text-center">
-                <p class="text-secondary">CodeCompanion can use built-in browser to preview results, get errors from the
-                  browser console or to take a screenshot of the page and use it to resolve any bugs or issues.</p>
+            <webview id="browserWebview" style="width:100%; height:calc(100% - 50px);" src="about:blank"></webview>
+            <div id="browserToast" class="toast text-bg-danger position-absolute bottom-0 end-0 me-5 mb-5" role="alert" aria-live="assertive" aria-atomic="true">
+              <div class="d-flex">
+                <div class="toast-body">
+                  <span id="browserErrorMessage"></span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
               </div>
-              <webview id="browserWebview" style="width:100%; height:100%; display:none;" src="about:blank"></webview>
             </div>
           </div>
         </div>

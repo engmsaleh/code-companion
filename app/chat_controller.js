@@ -6,6 +6,7 @@ const autosize = require('autosize');
 const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
+const Browser = require('./window/browser');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
@@ -34,6 +35,7 @@ class ChatController {
     this.chatLogs = [];
     this.agent = new Agent();
     this.terminalSession = new TerminalSession();
+    this.browser = new Browser();
     this.processMessageChange = this.processMessageChange.bind(this);
     this.submitMessage = this.submitMessage.bind(this);
     this.usage = {
