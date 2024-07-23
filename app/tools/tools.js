@@ -12,19 +12,19 @@ const toolDefinitions = [
   {
     name: 'browser',
     description:
-      'Allows to interact with the browser, Use it to open webpage for a user to see, to refresh page after making changes or to capture console output or a screenshot',
+      'Allows to interact with the browser, Use it to open webpage for a user to see, to refresh the page after making changes or to capture console output or a screenshot of the page',
     parameters: {
       type: 'object',
       properties: {
-        action: {
-          type: 'string',
-          description: 'Action to perform. go_to_url will return console output',
-          enum: ['go_to_url', 'capture_screenshot'],
-        },
         url: {
           type: 'string',
           description:
             'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path',
+        },
+        include_screenshot: {
+          type: 'boolean',
+          description: 'Include a screenshot of the page in the response',
+          default: false,
         },
       },
     },
@@ -175,13 +175,9 @@ async function previewMessageMapping(functionName, args) {
     fileLink = await openFileLink(args.targetFile);
   }
 
-  if (functionName === 'browser') {
-    browserMessage = args.action === 'go_to_url' ? `Loading URL: ${args.url}` : `Taking a screenshot of ${args.url}`;
-  }
-
   const mapping = {
     browser: {
-      message: browserMessage,
+      message: '',
       code: '',
     },
     create_or_overwrite_file: {
@@ -189,7 +185,7 @@ async function previewMessageMapping(functionName, args) {
       code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {
-      message: `Reading a file ${fileLink}`,
+      message: '',
       code: '',
     },
     replace_code: {
@@ -217,16 +213,21 @@ function taskPlanningDone() {
   return 'Task planning is done.';
 }
 
-async function browser({ action, url }) {
+async function browser({ include_screenshot, url }) {
+  let userScreenshotMessage = '';
+  let assistantScreenshotMessage = '';
+
   viewController.updateLoadingIndicator(true, 'Waiting for the page to load...');
   viewController.activateTab('browser-tab');
   const consoleOutput = await chatController.browser.loadUrl(url);
 
-  if (action === 'go_to_url') {
-    return `Browser loaded URL: ${url}\n<console_output>${consoleOutput}</console_output>`;
-  } else if (action === 'capture_screenshot') {
+  if (include_screenshot) {
     await chatController.browser.handleSreenshot();
+    userScreenshotMessage = ` and took a screenshot of`;
+    assistantScreenshotMessage = `\nScreenshot of the webpage was taken and attached in the user message`;
   }
+  chatController.chat.addFrontendMessage('function', `Opened URL ${userScreenshotMessage}: ${url}`);
+  return `Browser loaded URL: ${url}\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
 }
 
 async function createFile({ targetFile, createText }) {

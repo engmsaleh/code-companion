@@ -9,7 +9,7 @@
     content="img-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; style-src-elem * 'unsafe-inline'" />
   <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css" />
-  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark.css" />
+  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark-dimmed.min.css" />
   <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
   <link rel="stylesheet" href="node_modules/diff2html/bundles/css/diff2html.min.css" />
   <link rel="stylesheet" href="styles/styles.css" />
@@ -32,7 +32,7 @@
             <input class="form-check-input" type="checkbox" id="approvalRequired"
               onchange="chatController.saveSetting('approvalRequired')" />
             <label class="form-check-label" for="approvalRequired">Require approval</label>
-            <i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="right"
+            <i class="bi bi-question-circle" data-bs-toggle="tooltip" data-bs-placement="right"
               title="Require approval for actions that make changes, such as writing files or executing commands."></i>
           </div>
         </div>
@@ -54,7 +54,7 @@
     <div class="row g-0 mt-5">
       <!-- Left panel -->
       <div id="leftPanel" class="col overflow-hidden">
-        <div id="chat_history_container" class="px-3 overflow-y-auto mb-5 pb-5" style="height: calc(100vh - 120px);">
+        <div id="chat_history_container" class="px-3 overflow-y-auto overflow-x-hidden mb-5 pb-5" style="height: calc(100vh - 120px);">
           <div id="projectsCard" class="m-2"></div>
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
@@ -62,7 +62,7 @@
             <button id="reject_button" type="button" class="btn btn-link-secondary mx-2 btn-sm">
               <i class="bi bi-x-circle"></i> Reject
             </button>
-            <button id="reflect_button" type="button" class="btn btn-outline-primary mx-2 btn-sm">
+            <button id="reflect_button" type="button" class="btn btn-link-secondary mx-2 btn-sm">
               <i class="bi bi-arrow-clockwise"></i> Improve
             </button>
             <button id="approve_button" type="button" class="btn btn-primary mx-2 btn-sm">

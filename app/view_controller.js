@@ -18,9 +18,9 @@ class ViewController {
         return diffContainer.outerHTML;
       }
       if (language && hljs.getLanguage(language)) {
-        return `<pre class="hljs ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
+        return `<pre class="hljs rounded border ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
       }
-      return `<pre class="hljs"><code>${hljs.highlightAuto(code).value}</code></pre>`;
+      return `<pre class="hljs rounded border"><code>${hljs.highlightAuto(code).value}</code></pre>`;
     };
 
     // Set options for marked
@@ -112,13 +112,22 @@ class ViewController {
   }
 
   formatResponse(item) {
-    const copyButton = `<button class="btn btn-sm" id=copyMessage${item.id} onclick="chatController.chat.copyFrontendMessage(${item.id})"><i class="bi bi-clipboard"></i></button>`;
-    const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})"><i class="bi bi-trash"></i></button>`;
+    if (!item.content || item.content.trim() === '') {
+      return '';
+    }
+
+    const copyButton = `<button class="btn btn-sm" id=copyMessage${item.id} onclick="chatController.chat.copyFrontendMessage(${item.id})" data-bs-toggle="tooltip" data-bs-title="Copy"><i class="bi bi-clipboard"></i></button>`;
+    const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})" data-bs-toggle="tooltip" data-bs-title="Delete"><i class="bi bi-trash"></i></button>`;
+    let buttons = '';
+
+    if ((item.role === 'assistant' && item.content?.length > 10) || item.role === 'file') {
+      buttons = `<div class="d-flex justify-content-start"><div class="rounded border" role="group">${copyButton}${deleteMessagesButton}</div></div>`;
+    }
 
     const roleSettings = {
       user: { icon: 'person', rowClass: 'bg-light-subtle rounded mt-3', rowPadding: '3' },
       command: { icon: 'terminal', rowClass: 'mt-3', rowPadding: '3' },
-      function: { icon: null, rowClass: 'text-muted ms-1', rowPadding: '0' },
+      function: { icon: null, rowClass: 'text-muted ms-1 mt-2', rowPadding: '2' },
       error: { icon: 'exclamation-triangle text-warning', rowClass: 'mt-3', rowPadding: '3' },
       info: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
       file: { icon: 'paperclip', rowClass: 'mt-3', rowPadding: '3' },
@@ -127,22 +136,17 @@ class ViewController {
     };
 
     const roleSetting = roleSettings[item.role];
-    return this.createMessageHTML(roleSetting, item.content, deleteMessagesButton, copyButton);
+    return this.createMessageHTML(roleSetting, item.content, buttons);
   }
 
-  createMessageHTML(roleSetting, content, deleteMessagesButton, copyButton) {
-    return `<div class="row ${roleSetting.rowClass} align-items-start">
-              <div class="col-auto pt-${roleSetting.rowPadding}">
+  createMessageHTML(roleSetting, content, buttons) {
+    return `<div class="row ${roleSetting.rowClass} align-items-start flex-nowrap">
+              <div class="col-auto pt-${roleSetting.rowPadding} flex-shrink-0">
                 ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>
-              <div class="col w-75 pt-${roleSetting.rowPadding}">
-                ${content ? marked.parse(content) : ''}
-              </div>
-              <div class="col-auto pt-${roleSetting.rowPadding}">
-                <div class="d-flex flex-column">
-                  ${copyButton}
-                  ${deleteMessagesButton}
-                </div>
+              <div class="col pt-${roleSetting.rowPadding} flex-grow-1 min-width-0">
+                <div class="overflow-hidden">${content ? marked.parse(content) : ''}</div>
+                ${buttons}
               </div>
             </div>`;
   }
@@ -154,9 +158,9 @@ class ViewController {
 
     const stylesheet = document.querySelector('link[href^="node_modules/highlight.js/styles/"]');
     if (theme === 'light') {
-      stylesheet.href = 'node_modules/highlight.js/styles/github-light.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github.min.css';
     } else {
-      stylesheet.href = 'node_modules/highlight.js/styles/github-dark.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github-dark-dimmed.min.css';
     }
 
     ipcRenderer.send('theme-change', theme);
@@ -263,6 +267,11 @@ class ViewController {
         },
       },
     });
+  }
+
+  activateTooltips() {
+    const tooltipTriggerList = document.querySelectorAll('#chat_history_container [data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
   }
 
   showWelcomeContent() {

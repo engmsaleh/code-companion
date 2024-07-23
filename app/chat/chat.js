@@ -186,6 +186,7 @@ class Chat {
     viewController.addCopyCodeButtons();
     this.renderTask();
     viewController.showWelcomeContent();
+    viewController.activateTooltips();
   }
 
   updateStreamingMessage(message) {
