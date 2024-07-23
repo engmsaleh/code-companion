@@ -114,7 +114,6 @@ class ViewController {
   formatResponse(item) {
     const copyButton = `<button class="btn btn-sm" id=copyMessage${item.id} onclick="chatController.chat.copyFrontendMessage(${item.id})"><i class="bi bi-clipboard"></i></button>`;
     const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})"><i class="bi bi-trash"></i></button>`;
-    const buttons = `<div class="col-auto pt-3">${deleteMessagesButton}${copyButton}</div>`;
 
     const roleSettings = {
       user: { icon: 'person', rowClass: 'bg-light-subtle rounded mt-3', rowPadding: '3' },
@@ -128,28 +127,24 @@ class ViewController {
     };
 
     const roleSetting = roleSettings[item.role];
-    return this.createMessageHTML(roleSetting, item.content, buttons);
+    return this.createMessageHTML(roleSetting, item.content, deleteMessagesButton, copyButton);
   }
 
-  createMessageHTML(roleSetting, content, buttons = '') {
+  createMessageHTML(roleSetting, content, deleteMessagesButton, copyButton) {
     return `<div class="row ${roleSetting.rowClass} align-items-start">
               <div class="col-auto pt-${roleSetting.rowPadding}">
                 ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>
-              <div class="col w-50 pt-${roleSetting.rowPadding}">
+              <div class="col w-75 pt-${roleSetting.rowPadding}">
                 ${content ? marked.parse(content) : ''}
               </div>
-              ${buttons}
+              <div class="col-auto pt-${roleSetting.rowPadding}">
+                <div class="d-flex flex-column">
+                  ${copyButton}
+                  ${deleteMessagesButton}
+                </div>
+              </div>
             </div>`;
-  }
-
-  updateProjectsWindow() {
-    const chat = chatController.chat;
-    if (chat.frontendMessages.length === 0 && chat.task === null) {
-      viewController.showWelcomeContent();
-    } else {
-      document.getElementById('projectsCard').innerHTML = '';
-    }
   }
 
   changeTheme(theme) {
@@ -159,9 +154,9 @@ class ViewController {
 
     const stylesheet = document.querySelector('link[href^="node_modules/highlight.js/styles/"]');
     if (theme === 'light') {
-      stylesheet.href = 'node_modules/highlight.js/styles/github.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github-light.css';
     } else {
-      stylesheet.href = 'node_modules/highlight.js/styles/github-dark-dimmed.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github-dark.css';
     }
 
     ipcRenderer.send('theme-change', theme);
@@ -236,6 +231,7 @@ class ViewController {
     const leftPanel = document.getElementById('leftPanel');
     const rightPanel = document.getElementById('rightPanel');
     const resizeHandle = document.getElementById('resize_handle');
+    const chatInputContainer = document.getElementById('chatInputContainer');
     let leftWidth = 50; // Initial left panel width in percentage
     const savedRatio = localStorage.get('panelSplitRatio');
     if (savedRatio) {
@@ -244,6 +240,7 @@ class ViewController {
 
     const updatePanels = () => {
       leftPanel.style.flexBasis = `${leftWidth}%`;
+      chatInputContainer.style.width = `${leftWidth}%`;
       rightPanel.style.flexBasis = `calc(${100 - leftWidth}% - 3px)`;
     };
 
@@ -269,6 +266,12 @@ class ViewController {
   }
 
   showWelcomeContent() {
+    const chat = chatController.chat;
+    if (chat.frontendMessages.length !== 0 || chat.task !== null) {
+      document.getElementById('projectsCard').innerHTML = '';
+      return;
+    }
+
     let recentProjectsContent = '';
     let currentProjectContent = '';
     const projectController = chatController.agent.projectController;

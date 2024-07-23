@@ -192,7 +192,7 @@ class ChatContextBuilder {
     let content = [];
 
     if (messageContent) {
-      if (removeCodeDiff) {
+      if (removeCodeDiff && messageContent && messageContent.includes('<code diff>')) {
         messageContent = messageContent.replace(/<code diff>[\s\S]*<\/code diff>/g, '');
       }
       content.push({

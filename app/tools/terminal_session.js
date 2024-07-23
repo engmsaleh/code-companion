@@ -39,7 +39,7 @@ class TerminalSession {
       fontSize: 12,
       letterSpacing: 0,
       lineHeight: 1.25,
-      rows: 12,
+      rows: 48,
       windowsMode: isWindows,
       allowProposedApi: true,
       overviewRulerWidth: 20,

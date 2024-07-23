@@ -56,4 +56,9 @@ pre {
 /* diff2html fix for line number overflow bug */
 .d2h-code-side-linenumber {
   position: relative;
+  display: table-cell;
+}
+
+.d2h-diff-tbody tr {
+  position: relative;
 }

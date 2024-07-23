@@ -51,7 +51,6 @@ class ChatHistory {
       chatController.saveSetting('selectedModel', record.selectedModel);
       Object.assign(chatController.chat, record.chat);
       chatController.chat.updateUI();
-
       chatController.agent.projectController.openProject(record.workingDir);
     }
   }

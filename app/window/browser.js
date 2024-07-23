@@ -53,41 +53,41 @@ class Browser {
 
   reload() {
     this.webview.reload();
+    this.waitForPageLoadAndCollectOutput();
   }
 
   getCurrentUrl() {
     return this.webview.getURL();
   }
 
-  loadUrl(url, errorCallback = null) {
+  async loadUrl(url) {
+    this.webview.style.backgroundColor = 'white';
     if (!url.startsWith('http') && !url.startsWith('file') && !url.startsWith('about') && !url.startsWith('chrome')) {
       url = 'http://' + url;
     }
     this.webview.src = url;
     this.urlInput.value = url;
     this.currentUrl = url;
-    this.handleLoadErrors(errorCallback);
+    return await this.waitForPageLoadAndCollectOutput();
   }
 
-  handleLoadErrors(errorCallback) {
-    let errors = [];
-    const errorListener = (event) => {
-      if (event.level === 2) {
-        errors.push(event.message);
-      }
-    };
-    this.webview.addEventListener('console-message', errorListener);
-    this.webview.addEventListener(
-      'did-stop-loading',
-      () => {
-        this.webview.removeEventListener('console-message', errorListener);
-        this.indicateConsoleError(errors);
-        if (errorCallback) {
-          errorCallback(errors);
-        }
-      },
-      { once: true },
-    );
+  waitForPageLoadAndCollectOutput() {
+    return new Promise((resolve) => {
+      let consoleOutput = [];
+      const consoleListener = (event) => {
+        consoleOutput.push(`[${event.level}] ${event.message}`);
+      };
+      this.webview.addEventListener('console-message', consoleListener);
+      this.webview.addEventListener(
+        'did-stop-loading',
+        () => {
+          this.webview.removeEventListener('console-message', consoleListener);
+          this.indicateConsoleIssues(consoleOutput);
+          resolve(consoleOutput.join('\n'));
+        },
+        { once: true },
+      );
+    });
   }
 
   handleLoadError(event) {
@@ -120,9 +120,14 @@ class Browser {
     toast.show();
   }
 
-  indicateConsoleError(errors) {
+  indicateConsoleIssues(consoleOutput) {
+    const errors = consoleOutput.filter((msg) => msg.startsWith('[3]'));
+    const warnings = consoleOutput.filter((msg) => msg.startsWith('[2]'));
+
     if (errors.length > 0) {
       document.getElementById('browserDevToolsIcon').innerHTML = `<i class="bi bi-bug text-danger ms-2"></i>`;
+    } else if (warnings.length > 0) {
+      document.getElementById('browserDevToolsIcon').innerHTML = `<i class="bi bi-bug text-warning ms-2"></i>`;
     } else {
       document.getElementById('browserDevToolsIcon').innerHTML = '<i class="bi bi-bug ms-2"></i>';
     }

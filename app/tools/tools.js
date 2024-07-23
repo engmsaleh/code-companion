@@ -10,6 +10,29 @@ const { generateDiff } = require('./code_diff');
 
 const toolDefinitions = [
   {
+    name: 'browser',
+    description:
+      'Allows to interact with the browser, Use it to open webpage for a user to see, to refresh page after making changes or to capture console output or a screenshot',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          description: 'Action to perform. go_to_url will return console output',
+          enum: ['go_to_url', 'capture_screenshot'],
+        },
+        url: {
+          type: 'string',
+          description:
+            'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path',
+        },
+      },
+    },
+    executeFunction: browser,
+    enabled: true,
+    approvalRequired: false,
+  },
+  {
     name: 'create_or_overwrite_file',
     description: 'Create or overwrite a file with new content',
     parameters: {
@@ -83,6 +106,12 @@ const toolDefinitions = [
         command: {
           type: 'string',
         },
+        background: {
+          type: 'boolean',
+          description:
+            'Indicates if the command should run in the background with no output expected. (eg. to lauch web server before opening browser)',
+          default: false,
+        },
       },
     },
     executeFunction: shell,
@@ -127,6 +156,7 @@ const toolDefinitions = [
 async function previewMessageMapping(functionName, args) {
   let codeDiff = '';
   let fileLink = '';
+  let browserMessage = '';
 
   if (functionName === 'create_or_overwrite_file') {
     const newFile = await normalizedFilePath(args.targetFile);
@@ -145,7 +175,15 @@ async function previewMessageMapping(functionName, args) {
     fileLink = await openFileLink(args.targetFile);
   }
 
+  if (functionName === 'browser') {
+    browserMessage = args.action === 'go_to_url' ? `Loading URL: ${args.url}` : `Taking a screenshot of ${args.url}`;
+  }
+
   const mapping = {
+    browser: {
+      message: browserMessage,
+      code: '',
+    },
     create_or_overwrite_file: {
       message: `Creating a file ${args.targetFile}`,
       code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
@@ -177,6 +215,18 @@ async function previewMessageMapping(functionName, args) {
 function taskPlanningDone() {
   chatController.chat.chatContextBuilder.taskNeedsPlan = false;
   return 'Task planning is done.';
+}
+
+async function browser({ action, url }) {
+  viewController.updateLoadingIndicator(true, 'Waiting for the page to load...');
+  viewController.activateTab('browser-tab');
+  const consoleOutput = await chatController.browser.loadUrl(url);
+
+  if (action === 'go_to_url') {
+    return `Browser loaded URL: ${url}\n<console_output>${consoleOutput}</console_output>`;
+  } else if (action === 'capture_screenshot') {
+    await chatController.browser.handleSreenshot();
+  }
 }
 
 async function createFile({ targetFile, createText }) {
@@ -257,9 +307,16 @@ async function readFile({ targetFile }) {
   return `File "${filePath}" was read.`;
 }
 
-async function shell({ command }) {
+async function shell({ command, background }) {
   viewController.updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
-  let commandResult = await chatController.terminalSession.executeShellCommand(command);
+  let commandResult;
+
+  if (background) {
+    chatController.terminalSession.executeShellCommand(command);
+    return 'Command started in the background';
+  } else {
+    commandResult = await chatController.terminalSession.executeShellCommand(command);
+  }
   // Preserve first 5 lines and last 95 lines if more than 100 lines
   const lines = commandResult.split('\n');
   if (lines.length > 100) {

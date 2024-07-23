@@ -9,7 +9,7 @@
     content="img-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; style-src-elem * 'unsafe-inline'" />
   <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css" />
-  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark-dimmed.css" />
+  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark.css" />
   <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
   <link rel="stylesheet" href="node_modules/diff2html/bundles/css/diff2html.min.css" />
   <link rel="stylesheet" href="styles/styles.css" />
@@ -53,8 +53,8 @@
   <div class="container-fluid flex-grow-1 p-0">
     <div class="row g-0 mt-5">
       <!-- Left panel -->
-      <div id="leftPanel" class="col">
-        <div id="chat_history_container" class="px-3 overflow-y-auto" style="height: calc(100vh - 120px);">
+      <div id="leftPanel" class="col overflow-hidden">
+        <div id="chat_history_container" class="px-3 overflow-y-auto mb-5 pb-5" style="height: calc(100vh - 120px);">
           <div id="projectsCard" class="m-2"></div>
           <div id="output" class="m-2"></div>
           <div id="streaming_output" class="m-2"></div>
@@ -81,7 +81,7 @@
           </div>
         </div>
 
-        <div class="bg-body px-3 sticky-bottom mt-auto">
+        <div class="bg-body px-3 fixed-bottom" id="chatInputContainer" style="width: 50%;">
           <div class="d-flex align-items-end ms-1 bottom-0 bg-body py-3">
             <button class="btn shadow-none btn-sm text-decoration-none me-1" type="button" id="openFileBtn"
               onclick="viewController.openFileDialogue()">
@@ -119,21 +119,21 @@
       <div id="resize_handle" class="col-auto"></div>
 
       <!-- Right panel -->
-      <div id="rightPanel" class="col px-3">
+      <div id="rightPanel" class="col px-3 overflow-hidden">
         <ul class="nav nav-tabs nav-justified mt-3" id="rightPanelTabs" role="tablist">
-          <li class="nav-item active" role="presentation">
-            <button class="nav-link active text-nowrap" id="task-tab" data-bs-toggle="tab" data-bs-target="#task" type="button"
-              role="tab" aria-controls="task" aria-selected="true">
-              <i class="bi bi-list-task me-2"></i>
-              <span class="px-1">Task</span>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap active" id="shell-tab" data-bs-toggle="tab" data-bs-target="#shell" type="button"
+              role="tab" aria-controls="shell" aria-selected="true"
+              onclick="chatController.terminalSession.resizeTerminalWindow()">
+              <i class="bi bi-terminal me-2"></i>
+              <span class="px-1">Terminal</span>
             </button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link text-nowrap" id="shell-tab" data-bs-toggle="tab" data-bs-target="#shell" type="button"
-              role="tab" aria-controls="shell" aria-selected="false"
-              onclick="chatController.terminalSession.resizeTerminalWindow()">
-              <i class="bi bi-terminal me-2"></i>
-              <span class="px-1">Shell</span>
+            <button class="nav-link text-nowrap" id="task-tab" data-bs-toggle="tab" data-bs-target="#task" type="button"
+              role="tab" aria-controls="task" aria-selected="false">
+              <i class="bi bi-list-task me-2"></i>
+              <span class="px-1">Task</span>
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -146,12 +146,14 @@
         </ul>
         <div class="tab-content border border-top-0 mb-3" id="rightPanelTabContent"
           style="height: calc(100vh - 120px);">
-          <div class="tab-pane show active fade p-3" id="task" role="tabpanel" aria-labelledby="task-tab">
-            <h3 id="taskTitle"></h3>
-            <div id="taskContainer"></div>
-          </div>
-          <div class="tab-pane fade h-100" id="shell" role="tabpanel" aria-labelledby="shell-tab">
+          <div class="tab-pane show active fade h-100" id="shell" role="tabpanel" aria-labelledby="shell-tab">
             <div id="terminal_output" class="h-100"></div>
+          </div>
+          <div class="tab-pane fade p-5" id="task" role="tabpanel" aria-labelledby="task-tab">
+            <h3 id="taskTitle" class="mb-3"></h3>
+            <div id="taskContainer">
+              <div class="text-secondary">Provide task details in the chat input to start a new task</div>
+            </div>
           </div>
           <div class="tab-pane fade h-100" id="browser" role="tabpanel" aria-labelledby="browser-tab">
             <div class="border-bottom d-flex align-items-center p-2">

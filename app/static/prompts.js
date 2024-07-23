@@ -79,7 +79,7 @@ When finished with all the steps for the task:
 - Finally, fix all code bugs (do not implement enhancements or new features without the user's permission).
 
 Once all bugs are fixed or there are no more issues:
-- First, launch the task with the default application or open the default browser.
+- First, open task with browser if result of the task is a web based, otherwise use terminal to launch the task.
 - Second, ask for feedback and what to do next.`;
 
 module.exports = {
