@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
   viewController.buildDropdown('selectedModel', modelOptions, chatController.settings.selectedModel);
   viewController.initializeUIFormatting();
   viewController.changeTheme(chatController.settings.theme);
+  viewController.handlePanelResize();
   chatController.clearChat();
-
   onboardingController.showAllTips();
 });
 

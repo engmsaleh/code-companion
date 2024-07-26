@@ -3,6 +3,7 @@ const { marked } = require('marked');
 const { markedHighlight } = require('marked-highlight');
 const autosize = require('autosize');
 const { drawDiff } = require('./tools/code_diff');
+const interact = require('interactjs');
 
 class ViewController {
   initializeUIFormatting() {
@@ -17,9 +18,9 @@ class ViewController {
         return diffContainer.outerHTML;
       }
       if (language && hljs.getLanguage(language)) {
-        return `<pre class="hljs ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
+        return `<pre class="hljs rounded border ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
       }
-      return `<pre class="hljs"><code>${hljs.highlightAuto(code).value}</code></pre>`;
+      return `<pre class="hljs rounded border"><code>${hljs.highlightAuto(code).value}</code></pre>`;
     };
 
     // Set options for marked
@@ -70,10 +71,10 @@ class ViewController {
   }
 
   scrollToBottom() {
-    const container = document.getElementById('search_result_container');
+    const container = document.getElementById('chat_history_container');
 
     if (container) {
-      window.scrollTo({
+      container.scrollTo({
         top: container.scrollHeight,
         behavior: 'smooth',
       });
@@ -111,14 +112,22 @@ class ViewController {
   }
 
   formatResponse(item) {
-    const copyButton = `<button class="btn btn-sm" id=copyMessage${item.id} onclick="chatController.chat.copyFrontendMessage(${item.id})"><i class="bi bi-clipboard"></i></button>`;
-    const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})"><i class="bi bi-trash"></i></button>`;
-    const buttons = `<div class="col-auto pt-3">${deleteMessagesButton}${copyButton}</div>`;
+    if (!item.content || item.content.trim() === '') {
+      return '';
+    }
+
+    const copyButton = `<button class="btn btn-sm" id=copyMessage${item.id} onclick="chatController.chat.copyFrontendMessage(${item.id})" data-bs-toggle="tooltip" data-bs-title="Copy"><i class="bi bi-clipboard"></i></button>`;
+    const deleteMessagesButton = `<button class="btn btn-sm" id=deleteMessage${item.id} onclick="chatController.chat.deleteMessagesAfterId(${item.id})" data-bs-toggle="tooltip" data-bs-title="Delete"><i class="bi bi-trash"></i></button>`;
+    let buttons = '';
+
+    if ((item.role === 'assistant' && item.content?.length > 10) || item.role === 'file') {
+      buttons = `<div class="d-flex justify-content-start"><div class="rounded border" role="group">${copyButton}${deleteMessagesButton}</div></div>`;
+    }
 
     const roleSettings = {
       user: { icon: 'person', rowClass: 'bg-light-subtle rounded mt-3', rowPadding: '3' },
       command: { icon: 'terminal', rowClass: 'mt-3', rowPadding: '3' },
-      function: { icon: null, rowClass: 'text-muted ms-1', rowPadding: '0' },
+      function: { icon: null, rowClass: 'text-muted ms-1 mt-2', rowPadding: '2' },
       error: { icon: 'exclamation-triangle text-warning', rowClass: 'mt-3', rowPadding: '3' },
       info: { icon: 'info-circle', rowClass: 'mt-3', rowPadding: '3' },
       file: { icon: 'paperclip', rowClass: 'mt-3', rowPadding: '3' },
@@ -130,25 +139,16 @@ class ViewController {
     return this.createMessageHTML(roleSetting, item.content, buttons);
   }
 
-  createMessageHTML(roleSetting, content, buttons = '') {
-    return `<div class="row ${roleSetting.rowClass} align-items-start">
-              <div class="col-auto pt-${roleSetting.rowPadding}">
+  createMessageHTML(roleSetting, content, buttons) {
+    return `<div class="row ${roleSetting.rowClass} align-items-start flex-nowrap">
+              <div class="col-auto pt-${roleSetting.rowPadding} flex-shrink-0">
                 ${roleSetting.icon ? `<i class="bi bi-${roleSetting.icon}"></i>` : '&nbsp;'}
               </div>
-              <div class="col w-50 pt-${roleSetting.rowPadding}">
-                ${content ? marked.parse(content) : ''}
+              <div class="col pt-${roleSetting.rowPadding} flex-grow-1 min-width-0">
+                <div class="overflow-hidden">${content ? marked.parse(content) : ''}</div>
+                ${buttons}
               </div>
-              ${buttons}
             </div>`;
-  }
-
-  updateProjectsWindow() {
-    const chat = chatController.chat;
-    if (chat.frontendMessages.length === 0 && chat.task === null) {
-      viewController.showWelcomeContent();
-    } else {
-      document.getElementById('projectsCard').innerHTML = '';
-    }
   }
 
   changeTheme(theme) {
@@ -158,9 +158,9 @@ class ViewController {
 
     const stylesheet = document.querySelector('link[href^="node_modules/highlight.js/styles/"]');
     if (theme === 'light') {
-      stylesheet.href = 'node_modules/highlight.js/styles/github.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github.min.css';
     } else {
-      stylesheet.href = 'node_modules/highlight.js/styles/github-dark-dimmed.css';
+      stylesheet.href = 'node_modules/highlight.js/styles/github-dark-dimmed.min.css';
     }
 
     ipcRenderer.send('theme-change', theme);
@@ -225,7 +225,62 @@ class ViewController {
     chatController.terminalSession.executeCommandWithoutOutput(terminalCommand);
   }
 
+  activateTab(tabId) {
+    const tab = new bootstrap.Tab(`#${tabId}`);
+    tab.show();
+  }
+
+  handlePanelResize() {
+    const container = document.querySelector('.container-fluid > .row');
+    const leftPanel = document.getElementById('leftPanel');
+    const rightPanel = document.getElementById('rightPanel');
+    const resizeHandle = document.getElementById('resize_handle');
+    const chatInputContainer = document.getElementById('chatInputContainer');
+    let leftWidth = 50; // Initial left panel width in percentage
+    const savedRatio = localStorage.get('panelSplitRatio');
+    if (savedRatio) {
+      leftWidth = parseFloat(savedRatio);
+    }
+
+    const updatePanels = () => {
+      leftPanel.style.flexBasis = `${leftWidth}%`;
+      chatInputContainer.style.width = `${leftWidth}%`;
+      rightPanel.style.flexBasis = `calc(${100 - leftWidth}% - 3px)`;
+    };
+
+    updatePanels(); // Set initial sizes
+
+    interact(resizeHandle).draggable({
+      cursorChecker() {
+        return 'ew-resize';
+      },
+      axis: 'x',
+      listeners: {
+        move: (event) => {
+          const containerWidth = container.offsetWidth;
+          leftWidth = ((leftPanel.offsetWidth + event.dx) / containerWidth) * 100;
+          leftWidth = Math.max(30, Math.min(70, leftWidth));
+          updatePanels();
+        },
+        end: () => {
+          localStorage.set('panelSplitRatio', leftWidth);
+        },
+      },
+    });
+  }
+
+  activateTooltips() {
+    const tooltipTriggerList = document.querySelectorAll('#chat_history_container [data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
+  }
+
   showWelcomeContent() {
+    const chat = chatController.chat;
+    if (chat.frontendMessages.length !== 0 || chat.task !== null) {
+      document.getElementById('projectsCard').innerHTML = '';
+      return;
+    }
+
     let recentProjectsContent = '';
     let currentProjectContent = '';
     const projectController = chatController.agent.projectController;
@@ -236,10 +291,20 @@ class ViewController {
       const projectName =
         project.name === projectController.currentProject?.name ? `<strong>${project.name}</strong>` : project.name;
       recentProjectsContent += `
-        <div class="row">
-          <div class="col"><a href="#" class="card-link me-3 text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');"><i class="bi bi-folder me-2"></i>${projectName}</a></div>
-          <div class="col"><a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');"><i class="bi bi-pencil me-2"></i>Instructions</a></div>
-          <div class="col-6 text-truncate text-secondary text-nowrap d-none d-md-block">${projectPath}</div>
+        <div class="row align-items-center">
+          <div class="col-12 col-sm-4 mb-2 mb-sm-0">
+            <a href="#" class="card-link text-nowrap text-truncate" onclick="event.preventDefault(); chatController.agent.projectController.openProject('${projectPath}');">
+              <i class="bi bi-folder me-2"></i>${projectName}
+            </a>
+          </div>
+          <div class="col-12 col-sm-3 mb-2 mb-sm-0">
+            <a href="#" class="card-link text-nowrap" onclick="event.preventDefault(); chatController.agent.projectController.showInstructionsModal('${projectPath}');">
+              <i class="bi bi-pencil me-2"></i> Instructions
+            </a>
+          </div>
+          <div class="col-12 col-sm-5 text-truncate text-secondary text-nowrap">
+            ${projectPath}
+          </div>
         </div>`;
     });
 

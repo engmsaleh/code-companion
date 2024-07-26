@@ -6,6 +6,7 @@ const autosize = require('autosize');
 const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
+const Browser = require('./window/browser');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
@@ -34,6 +35,7 @@ class ChatController {
     this.chatLogs = [];
     this.agent = new Agent();
     this.terminalSession = new TerminalSession();
+    this.browser = new Browser();
     this.processMessageChange = this.processMessageChange.bind(this);
     this.submitMessage = this.submitMessage.bind(this);
     this.usage = {
@@ -140,12 +142,12 @@ class ChatController {
     document.getElementById('retry_button').removeAttribute('hidden');
   }
 
-  requestStopProcess() {
+  async requestStopProcess() {
     this.stopProcess = true;
     this.isProcessing = false;
     this.model.abort();
     const stopButton = document.getElementById('requestStopProcess');
-    this.terminalSession.interruptShellSession();
+    await this.terminalSession.interruptShellSession();
     stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle text-danger me-2"></i> Stopping...';
     setTimeout(() => {
       stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle me-2"></i>';
@@ -286,6 +288,11 @@ class ChatController {
 
   async clearChat() {
     trackEvent(`new_chat`);
+    if (this.chat && this.chat.task) {
+      document.getElementById('taskTitle').innerText = '';
+      document.getElementById('taskContainer').innerHTML =
+        '<div class="text-secondary">Provide task details in the chat input to start a new task</div>';
+    }
     this.chat = new Chat();
     this.agent = new Agent(this.agent.projectController.currentProject);
     this.initializeModel();
@@ -305,7 +312,7 @@ class ChatController {
       total_tokens: 0,
     };
     viewController.updateFooterMessage();
-    viewController.updateProjectsWindow();
+    viewController.showWelcomeContent();
 
     this.agent.projectState = {
       complexity: '',

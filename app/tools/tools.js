@@ -10,6 +10,29 @@ const { generateDiff } = require('./code_diff');
 
 const toolDefinitions = [
   {
+    name: 'browser',
+    description:
+      'Allows to interact with the browser, Use it to open webpage for a user to see, to refresh the page after making changes or to capture console output or a screenshot of the page',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description:
+            'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path',
+        },
+        include_screenshot: {
+          type: 'boolean',
+          description: 'Include a screenshot of the page in the response',
+          default: false,
+        },
+      },
+    },
+    executeFunction: browser,
+    enabled: true,
+    approvalRequired: false,
+  },
+  {
     name: 'create_or_overwrite_file',
     description: 'Create or overwrite a file with new content',
     parameters: {
@@ -82,6 +105,13 @@ const toolDefinitions = [
       properties: {
         command: {
           type: 'string',
+          description: 'Single shell command',
+        },
+        background: {
+          type: 'boolean',
+          description:
+            'When set to false, will hang until command finished executing. Set to true always when you need to run a webserver right before opening a browser',
+          default: false,
         },
       },
     },
@@ -127,6 +157,7 @@ const toolDefinitions = [
 async function previewMessageMapping(functionName, args) {
   let codeDiff = '';
   let fileLink = '';
+  let browserMessage = '';
 
   if (functionName === 'create_or_overwrite_file') {
     const newFile = await normalizedFilePath(args.targetFile);
@@ -146,12 +177,16 @@ async function previewMessageMapping(functionName, args) {
   }
 
   const mapping = {
+    browser: {
+      message: '',
+      code: '',
+    },
     create_or_overwrite_file: {
       message: `Creating a file ${args.targetFile}`,
       code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
     },
     read_file: {
-      message: `Reading a file ${fileLink}`,
+      message: '',
       code: '',
     },
     replace_code: {
@@ -177,6 +212,23 @@ async function previewMessageMapping(functionName, args) {
 function taskPlanningDone() {
   chatController.chat.chatContextBuilder.taskNeedsPlan = false;
   return 'Task planning is done.';
+}
+
+async function browser({ include_screenshot, url }) {
+  let userScreenshotMessage = '';
+  let assistantScreenshotMessage = '';
+
+  viewController.updateLoadingIndicator(true, 'Waiting for the page to load...');
+  viewController.activateTab('browser-tab');
+  const consoleOutput = await chatController.browser.loadUrl(url);
+
+  if (include_screenshot) {
+    await chatController.browser.handleSreenshot();
+    userScreenshotMessage = ` and took a screenshot of`;
+    assistantScreenshotMessage = `\nScreenshot of the webpage was taken and attached in the user message`;
+  }
+  chatController.chat.addFrontendMessage('function', `Opened URL ${userScreenshotMessage}: ${url}`);
+  return `Browser loaded URL: ${url}\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
 }
 
 async function createFile({ targetFile, createText }) {
@@ -257,9 +309,15 @@ async function readFile({ targetFile }) {
   return `File "${filePath}" was read.`;
 }
 
-async function shell({ command }) {
+async function shell({ command, background }) {
   viewController.updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
-  let commandResult = await chatController.terminalSession.executeShellCommand(command);
+  let commandResult;
+  if (background === true) {
+    chatController.terminalSession.executeShellCommand(command);
+    return 'Command started in the background';
+  } else {
+    commandResult = await chatController.terminalSession.executeShellCommand(command);
+  }
   // Preserve first 5 lines and last 95 lines if more than 100 lines
   const lines = commandResult.split('\n');
   if (lines.length > 100) {

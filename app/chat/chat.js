@@ -1,4 +1,6 @@
 const { clipboard } = require('electron');
+const marked = require('marked');
+
 const ChatHistory = require('./chat_history');
 const ChatContextBuilder = require('./chat_context_builder');
 const { debounce } = require('lodash');
@@ -41,20 +43,18 @@ class Chat {
     this.renderTask();
     await this.createTaskTitle();
     this.renderTask();
+    viewController.activateTab('task-tab');
   }
 
   renderTask() {
     if (!this.task) {
-      document.getElementById('taskTitle').innerHTML = 'Provide task details below...';
-      document.getElementById('taskSection').hidden = true;
       return;
     }
 
     const taskTitle =
       this.taskTitle || this.task.split(' ').slice(0, 4).join(' ') + (this.task.split(' ').length > 4 ? '...' : '');
     document.getElementById('taskTitle').innerText = taskTitle;
-    document.getElementById('taskSection').hidden = false;
-    document.getElementById('taskContainer').innerHTML = this.task;
+    document.getElementById('taskContainer').innerHTML = marked.parse(this.task);
     document.getElementById('messageInput').setAttribute('placeholder', 'Send message...');
   }
 
@@ -66,7 +66,7 @@ class Chat {
       return;
     }
 
-    const prompt = `Give the task a short title (up to four words):\n\n${this.task}`;
+    const prompt = `Create a concise, engaging task title (2-4 words) for the following task description:\n<task_description>\n${this.task}\n</task_description>`;
     const format = {
       type: 'string',
       result: 'Shortened task title',
@@ -185,7 +185,8 @@ class Chat {
     viewController.scrollToBottom();
     viewController.addCopyCodeButtons();
     this.renderTask();
-    viewController.updateProjectsWindow();
+    viewController.showWelcomeContent();
+    viewController.activateTooltips();
   }
 
   updateStreamingMessage(message) {

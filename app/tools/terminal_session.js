@@ -4,7 +4,6 @@ const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
 const { WebLinksAddon } = require('xterm-addon-web-links');
 const { Unicode11Addon } = require('xterm-addon-unicode11');
-const interact = require('interactjs');
 const { ipcRenderer, shell } = require('electron');
 const { debounce } = require('lodash');
 const { withTimeout, log } = require('../utils');
@@ -40,7 +39,7 @@ class TerminalSession {
       fontSize: 12,
       letterSpacing: 0,
       lineHeight: 1.25,
-      rows: 12,
+      rows: 48,
       windowsMode: isWindows,
       allowProposedApi: true,
       overviewRulerWidth: 20,
@@ -76,12 +75,6 @@ class TerminalSession {
     this.terminal.loadAddon(new Unicode11Addon());
     this.terminal.unicode.activeVersion = '11';
 
-    // set terminal height to last saved value
-    const terminalOutputHeight = localStorage.get('terminalOutputHeight');
-    if (terminalOutputHeight) {
-      document.querySelector('#terminal_output').style.height = `${terminalOutputHeight}px`;
-    }
-
     ipcRenderer.send('start-shell', {
       cwd: chatController.agent.currentWorkingDir,
     });
@@ -104,17 +97,21 @@ class TerminalSession {
     switch (this.shellType) {
       case 'bash':
         this.writeToShell(`PROMPT_COMMAND='echo -n "${FIXED_PROMPT}"'\r`);
+        this.writeToShell('export BROWSER=none\r');
         break;
       case 'zsh':
         this.writeToShell(`precmd() { echo -n "${FIXED_PROMPT}"; }\r`);
+        this.writeToShell('export BROWSER=none\r');
         break;
       case 'fish':
         this.writeToShell('functions --copy fish_prompt original_fish_prompt\r');
         this.writeToShell(`function fish_prompt; original_fish_prompt; echo -n "${FIXED_PROMPT}"; end\r`);
+        this.writeToShell('set -x BROWSER none\r');
         break;
       case 'powershell.exe':
         FIXED_PROMPT = 'CodeCompanion.AI: ';
         this.writeToShell(`function prompt { '${FIXED_PROMPT}' + (Get-Location) + '> ' }\r`);
+        this.writeToShell('$env:BROWSER = "none"\r');
         break;
       default:
         console.error(`Unsupported shell ${this.shellType}`);
@@ -128,37 +125,46 @@ class TerminalSession {
   }
 
   resizeTerminalWindow() {
-    if (this.terminal) {
-      this.fitAddon.fit();
-      ipcRenderer.send('resize-shell', {
-        cols: this.terminal.cols,
-        rows: this.terminal.rows,
-      });
-    }
+    setTimeout(() => {
+      if (this.terminal) {
+        this.fitAddon.fit();
+        ipcRenderer.send('resize-shell', {
+          cols: this.terminal.cols,
+          rows: this.terminal.rows,
+        });
+      }
+    }, 400);
   }
 
   handleTerminalResize() {
-    this.terminalOutput = document.querySelector('#terminal_output');
     this.debounceResizeTerminalWindow = debounce(this.resizeTerminalWindow.bind(this), 200);
-
-    interact('#terminal_resize_handle').draggable({
-      cursorChecker() {
-        return 'ns-resize';
-      },
-      lockAxis: 'y',
-      listeners: {
-        move: (event) => {
-          const newHeight = parseInt(window.getComputedStyle(this.terminalOutput).height) - event.dy;
-          this.terminalOutput.style.height = `${newHeight}px`;
-          localStorage.set('terminalOutputHeight', newHeight);
-          this.debounceResizeTerminalWindow();
-        },
-      },
-    });
   }
 
   interruptShellSession() {
-    this.writeToShell('\x03');
+    return new Promise((resolve, reject) => {
+      this.outputData = '';
+
+      const shellDataListener = (event, data) => {
+        this.outputData += data;
+
+        if (this.outputData.includes(FIXED_PROMPT)) {
+          ipcRenderer.removeListener('shell-data', shellDataListener);
+
+          const bufferCheckInterval = setInterval(() => {
+            const currentBuffer = this.terminal.buffer.active;
+            if (currentBuffer === this.previousBuffer) {
+              clearInterval(bufferCheckInterval);
+              resolve();
+            } else {
+              this.previousBuffer = currentBuffer;
+            }
+          }, 200);
+        }
+      };
+
+      ipcRenderer.on('shell-data', shellDataListener);
+      this.writeToShell(`\x03`);
+    });
   }
 
   writeToShell(data) {
@@ -205,6 +211,10 @@ class TerminalSession {
   }
 
   async executeShellCommand(command) {
+    viewController.activateTab('shell-tab');
+    this.resizeTerminalWindow();
+    await this.interruptShellSession();
+
     return new Promise((resolve, reject) => {
       this.outputData = '';
 

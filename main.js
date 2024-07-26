@@ -46,10 +46,6 @@ function setupLocalShortcuts() {
     { key: 'CmdOrCtrl+M', action: () => windowManager.minimize() },
     { key: 'CmdOrCtrl+Alt+F', action: () => windowManager.maximize() },
     { key: 'F11', action: () => windowManager.toggleFullScreen() },
-    { key: 'CmdOrCtrl+Left', action: () => windowManager.moveWindow('left') },
-    { key: 'CmdOrCtrl+Right', action: () => windowManager.moveWindow('right') },
-    { key: 'CmdOrCtrl+Up', action: () => windowManager.moveWindow('up') },
-    { key: 'CmdOrCtrl+Down', action: () => windowManager.moveWindow('down') },
     { key: 'CmdOrCtrl+Shift+Left', action: () => windowManager.resizeWindow('narrower') },
     { key: 'CmdOrCtrl+Shift+Right', action: () => windowManager.resizeWindow('wider') },
     { key: 'CmdOrCtrl+Shift+Up', action: () => windowManager.resizeWindow('taller') },
@@ -105,6 +101,7 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
+      webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
