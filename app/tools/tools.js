@@ -105,11 +105,12 @@ const toolDefinitions = [
       properties: {
         command: {
           type: 'string',
+          description: 'Single shell command',
         },
         background: {
           type: 'boolean',
           description:
-            'Indicates if the command should run in the background with no output expected. (eg. to lauch web server before opening browser)',
+            'When set to false, will hang until command finished executing. Set to true always when you need to run a webserver right before opening a browser',
           default: false,
         },
       },
@@ -311,8 +312,7 @@ async function readFile({ targetFile }) {
 async function shell({ command, background }) {
   viewController.updateLoadingIndicator(true, 'Executing shell command ...  (click Stop to cancel or use Ctrl+C)');
   let commandResult;
-
-  if (background) {
+  if (background === true) {
     chatController.terminalSession.executeShellCommand(command);
     return 'Command started in the background';
   } else {

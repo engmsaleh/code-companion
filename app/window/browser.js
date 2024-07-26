@@ -23,20 +23,18 @@ class Browser {
     });
 
     this.webview.addEventListener('did-stop-loading', () => {
-      this.updateUrlInput();
       document.getElementById('browserIcon').innerHTML = '<i class="bi bi-globe me-2"></i>';
     });
 
-    this.webview.addEventListener('did-fail-load', (event) => {
-      if (event.errorCode !== -3) {
-        // Ignore harmless errors
-        document.getElementById('browserIcon').innerHTML = '<i class="bi bi-exclamation-triangle text-warning"></i>';
+    this.webview.addEventListener('did-frame-navigate', (event) => {
+      if (event.isMainFrame) {
+        this.updateUrlInput(event.url);
+        this.handleHttpError(event.httpResponseCode, event.httpStatusText);
       }
     });
   }
 
-  updateUrlInput() {
-    const url = this.getCurrentUrl();
+  updateUrlInput(url) {
     if (url !== 'about:blank') {
       this.currentUrl = url;
       this.urlInput.value = url;
@@ -65,32 +63,40 @@ class Browser {
     if (!url.startsWith('http') && !url.startsWith('file') && !url.startsWith('about') && !url.startsWith('chrome')) {
       url = 'http://' + url;
     }
-    this.webview.src = url;
     this.urlInput.value = url;
     this.currentUrl = url;
-    return await this.waitForPageLoadAndCollectOutput();
+    return await this.waitForPageLoadAndCollectOutput(url);
   }
 
-  waitForPageLoadAndCollectOutput() {
+  waitForPageLoadAndCollectOutput(url) {
     return new Promise((resolve) => {
       let consoleOutput = [];
       const consoleListener = (event) => {
         consoleOutput.push(`[${event.level}] ${event.message}`);
       };
+      const httpErrorListener = (event) => {
+        if (event.httpResponseCode >= 400) {
+          consoleOutput.push(`[3] Error loading ${event.url}: ${event.httpResponseCode} ${event.httpStatusText}`);
+        }
+      };
       this.webview.addEventListener('console-message', consoleListener);
+      this.webview.addEventListener('did-frame-navigate', httpErrorListener);
       this.webview.addEventListener(
         'did-stop-loading',
         () => {
           this.webview.removeEventListener('console-message', consoleListener);
+          this.webview.removeEventListener('did-frame-navigate', httpErrorListener);
           this.indicateConsoleIssues(consoleOutput);
           resolve(consoleOutput.join('\n'));
         },
         { once: true },
       );
+      this.webview.src = url;
     });
   }
 
   handleLoadError(event) {
+    this.webview.style.backgroundColor = 'transparent';
     const { errorCode, errorDescription, validatedURL } = event;
     if (errorCode === -3) return;
 
@@ -114,10 +120,31 @@ class Browser {
     this.showError(userFriendlyMessage);
   }
 
+  handleHttpError(httpResponseCode, httpStatusText) {
+    if (httpResponseCode >= 400) {
+      this.webview.style.backgroundColor = 'transparent';
+      this.showError(`HTTP Error ${httpResponseCode}: ${httpStatusText}`);
+    }
+  }
+
   showError(message) {
-    document.getElementById('browserErrorMessage').innerHTML = message;
-    const toast = new bootstrap.Toast(document.getElementById('browserToast'));
-    toast.show();
+    const errorHtml = `
+      <div style="
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #1e90ff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+      ">
+        <p>${message}</p>
+      </div>
+    `;
+    this.webview.executeJavaScript(`
+      document.body.style.margin = '0';
+      document.body.innerHTML = ${JSON.stringify(errorHtml)};
+    `);
   }
 
   indicateConsoleIssues(consoleOutput) {
@@ -145,7 +172,7 @@ class Browser {
 
     const base64Image = await this.getScreenshot();
     if (!base64Image) {
-      this.showError('Failed to capture screenshot');
+      chatController.chat.addFrontendMessage('error', 'Failed to capture screenshot');
       return;
     }
 
@@ -166,7 +193,7 @@ class Browser {
     chatController.chat.addBackendMessage('user', content);
     chatController.chat.addFrontendMessage(
       'file',
-      `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3" alt="image preview" style="max-height: 250px;"></div>`,
+      `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3 bg-white" alt="image preview" style="max-height: 300px;"></div>`,
     );
   }
 
@@ -178,7 +205,7 @@ class Browser {
     try {
       const nativeImage = await this.webview.capturePage();
       const base64Image = nativeImage.toPNG().toString('base64');
-      return `data:image/png;base64,${base64Image}`;
+      return base64Image ? `data:image/png;base64,${base64Image}` : null;
     } catch (error) {
       console.error('Error capturing screenshot:', error);
       return null;

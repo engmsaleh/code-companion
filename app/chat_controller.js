@@ -142,12 +142,12 @@ class ChatController {
     document.getElementById('retry_button').removeAttribute('hidden');
   }
 
-  requestStopProcess() {
+  async requestStopProcess() {
     this.stopProcess = true;
     this.isProcessing = false;
     this.model.abort();
     const stopButton = document.getElementById('requestStopProcess');
-    this.terminalSession.interruptShellSession();
+    await this.terminalSession.interruptShellSession();
     stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle text-danger me-2"></i> Stopping...';
     setTimeout(() => {
       stopButton.innerHTML = '<i class="bi bg-body border-0 bi-stop-circle me-2"></i>';
