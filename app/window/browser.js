@@ -193,7 +193,7 @@ class Browser {
     chatController.chat.addBackendMessage('user', content);
     chatController.chat.addFrontendMessage(
       'file',
-      `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3 bg-white" alt="image preview" style="max-height: 300px;"></div>`,
+      `<div class="d-flex justify-content-center"><img src="${base64Image}" class="img-fluid m-3 bg-white" alt="image preview" style="max-height: 350px;"></div>`,
     );
   }
 

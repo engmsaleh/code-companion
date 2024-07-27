@@ -23,7 +23,8 @@ const toolDefinitions = [
         },
         include_screenshot: {
           type: 'boolean',
-          description: 'Include a screenshot of the page in the response',
+          description:
+            'Set to true only if you or the user need a screenshot of the page. Avoid taking a screenshot unless some problem need to be solved',
           default: false,
         },
       },
@@ -99,14 +100,14 @@ const toolDefinitions = [
   },
   {
     name: 'run_shell_command',
-    description: 'Run a single command in terminal',
+    description: 'Run a single shell command',
     parameters: {
       type: 'object',
       properties: {
         command: {
           type: 'string',
           description:
-            'Terminal command. Don not combine multiple commands with &. Instead call run_shell_command multiple times.',
+            'Single shell command to run. DO NOT combine multiple shell commands into a single command with "&&"',
         },
         background: {
           type: 'boolean',
@@ -224,6 +225,7 @@ async function browser({ include_screenshot, url }) {
   const consoleOutput = await chatController.browser.loadUrl(url);
 
   if (include_screenshot) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     await chatController.browser.handleSreenshot();
     userScreenshotMessage = ` and took a screenshot of`;
     assistantScreenshotMessage = `\nScreenshot of the webpage was taken and attached in the user message`;

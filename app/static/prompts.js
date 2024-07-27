@@ -28,6 +28,7 @@ const TASK_EXECUTION_PROMPT_TEMPLATE = `You are a super smart AI coding assistan
 Think step by step and run tools until the entire task has been completed.
 For each step, first provide an explanation of what needs to be done, what is important to consider and include in the code, and the best way to do it without actually writing the code or naming tools that will be used, and then use the tool.
 Important: combine multiple steps into a single tool call when possible. Example: read, create, or update multiple files at once.
+Note, do not combine multiple shell commands with "&&" into a single command. Instead separate and run many tools "run_shell_command" in parallel for each part of the command.
 Reduce the number of steps by writing complete and working code.
 
 Ensure to follow these instructions when writing code:
