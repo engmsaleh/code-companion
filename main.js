@@ -32,7 +32,7 @@ let windowManager;
 if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   setTimeout(() => {
     win.webContents.openDevTools();
-  }, 100);
+  }, 3000);
 } else {
   Sentry.init({
     dsn: 'https://87985c08c00b4f0c83989b182e9fbe95@o4505507137847296.ingest.sentry.io/4505507139485696',
