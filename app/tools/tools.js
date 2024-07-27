@@ -99,13 +99,14 @@ const toolDefinitions = [
   },
   {
     name: 'run_shell_command',
-    description: 'Run shell commands',
+    description: 'Run a single command in terminal',
     parameters: {
       type: 'object',
       properties: {
         command: {
           type: 'string',
-          description: 'Single shell command',
+          description:
+            'Terminal command. Don not combine multiple commands with &. Instead call run_shell_command multiple times.',
         },
         background: {
           type: 'boolean',

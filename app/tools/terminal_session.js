@@ -147,7 +147,7 @@ class TerminalSession {
       const shellDataListener = (event, data) => {
         this.outputData += data;
 
-        if (this.outputData.includes(FIXED_PROMPT)) {
+        if (this.isCommandFinishedExecuting(`\x03`)) {
           ipcRenderer.removeListener('shell-data', shellDataListener);
 
           const bufferCheckInterval = setInterval(() => {
@@ -158,7 +158,7 @@ class TerminalSession {
             } else {
               this.previousBuffer = currentBuffer;
             }
-          }, 200);
+          }, 300);
         }
       };
 
@@ -173,19 +173,25 @@ class TerminalSession {
 
   writeToTerminal(data) {
     this.terminal.write(data);
+    this.checkIfUserNavigatedToDifferentDirectory(data);
+  }
 
+  checkIfUserNavigatedToDifferentDirectory(data) {
     this.commandBuffer += this.removeASCII(data);
     if (data.toString().endsWith('\r') || data.toString().endsWith('\n') || data.toString().endsWith('\r\n')) {
-      const command = this.commandBuffer.trim();
-      this.commandBuffer = '';
-      if (command.match(/cd\s+(\S+)/i)) {
-        this.needToUpdateWorkingDir = true;
+      if (this.commandBuffer.includes(FIXED_PROMPT)) {
+        const command = this.commandBuffer.split(FIXED_PROMPT).pop();
+        if (command.match(/cd\s+(\S+)/i)) {
+          this.needToUpdateWorkingDir = true;
+        } else {
+          this.needToUpdateWorkingDir = false;
+        }
       }
+      this.commandBuffer = '';
     }
   }
 
   executeCommandWithoutOutput(command) {
-    log('executeCommandWithoutOutput', command);
     ipcRenderer.send('execute-command', command);
   }
 
@@ -220,10 +226,9 @@ class TerminalSession {
 
       const shellDataListener = (event, data) => {
         this.outputData += data;
-
-        if (this.outputData.includes(FIXED_PROMPT)) {
+        if (this.isCommandFinishedExecuting(command)) {
           ipcRenderer.removeListener('shell-data', shellDataListener);
-
+          // Make sure no more changes are coming
           const bufferCheckInterval = setInterval(() => {
             const currentBuffer = this.terminal.buffer.active;
             if (currentBuffer === this.previousBuffer) {
@@ -232,13 +237,18 @@ class TerminalSession {
             } else {
               this.previousBuffer = currentBuffer;
             }
-          }, 200);
+          }, 300);
         }
       };
 
       ipcRenderer.on('shell-data', shellDataListener);
       this.writeToShell(`${command}\r`);
     });
+  }
+
+  isCommandFinishedExecuting(command) {
+    const lastOutputDataAfterCommand = this.removeASCII(this.outputData).split(command).pop();
+    return lastOutputDataAfterCommand.includes(FIXED_PROMPT);
   }
 
   removeASCII(data) {
