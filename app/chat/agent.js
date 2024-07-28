@@ -75,7 +75,7 @@ class Agent {
       }
     }
 
-    this.git.updateTabIcon();
+    this.projectController.git.updateTabIcon();
     return { decision: 'approve', reflectMessage: null };
   }
 
