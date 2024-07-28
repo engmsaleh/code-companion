@@ -137,10 +137,19 @@
             </button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link text-nowrap" id="browser-tab" data-bs-toggle="tab" data-bs-target="#browser" type="button"
+            <button class="nav-link text-nowrap d-flex align-items-center justify-content-center" id="browser-tab" data-bs-toggle="tab" data-bs-target="#browser" type="button"
               role="tab" aria-controls="browser" aria-selected="false">
-              <span id="browserIcon"><i class="bi bi-globe me-2"></i></span>
-              <span class="px-1">Browser</span>
+              <span id="browserIcon" class="d-flex align-items-center"><i class="bi bi-globe me-2"></i></span>
+              <span>Browser</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap d-flex align-items-center justify-content-center" id="git-tab" data-bs-toggle="tab" data-bs-target="#git" type="button"
+              role="tab" aria-controls="git" aria-selected="false"
+              onclick="chatController.agent.projectController.git?.renderUI();"
+              >
+              <span id="gitIcon" class="d-flex align-items-center"><i class="bi bi-git me-2"></i></span>
+              <span>Git</span>
             </button>
           </li>
         </ul>
@@ -185,6 +194,17 @@
               </button>
             </div>
             <webview id="browserWebview" style="width:100%; height:calc(100% - 50px);" src="about:blank"></webview>
+          </div>
+          <div class="tab-pane fade h-100" id="git" role="tabpanel" aria-labelledby="git-tab">
+            <div id="git_output" class="h-100">
+              <div class="d-flex justify-content-center align-items-center h-100">
+                <p class="text-secondary text-center">
+                  Open a project with a Git repository to use Git features.
+                  <br>
+                  Or ask in chat to initialize a new repository.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

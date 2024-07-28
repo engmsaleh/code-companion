@@ -270,8 +270,15 @@ class ViewController {
   }
 
   activateTooltips() {
-    const tooltipTriggerList = document.querySelectorAll('#chat_history_container [data-bs-toggle="tooltip"]');
-    [...tooltipTriggerList].forEach((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach((tooltipTriggerEl) => {
+      const tooltip = new bootstrap.Tooltip(tooltipTriggerEl);
+      tooltipTriggerEl.addEventListener('shown.bs.tooltip', () => {
+        setTimeout(() => {
+          tooltip.hide();
+        }, 1000);
+      });
+    });
   }
 
   showWelcomeContent() {

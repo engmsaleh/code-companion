@@ -1,6 +1,7 @@
 const fs = require('graceful-fs');
 const CryptoJS = require('crypto-js');
 const pathModule = require('path');
+const Git = require('./window/git');
 const Store = require('electron-store');
 const ignore = require('ignore');
 const ccignoreTemplate = require('./static/embeddings_ignore_patterns');
@@ -12,6 +13,7 @@ const addInstructionsModal = new bootstrap.Modal(document.getElementById('addIns
 
 class ProjectController {
   constructor(currentProject) {
+    this.git = null;
     this.getProjects();
     this.openProject(currentProject?.path);
     this.filesList = [];
@@ -54,6 +56,7 @@ class ProjectController {
     this.currentProject = project;
     document.title = project.name + ' - CodeCompanion.AI';
     viewController.showWelcomeContent();
+    this.git = new Git(project.path);
   }
 
   getProjects() {
