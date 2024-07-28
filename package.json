@@ -104,6 +104,7 @@
     "node-pty": "^1.0.0",
     "openai": "^4.20.1",
     "read-chunk": "^3.2.0",
+    "simple-git": "^3.25.0",
     "uuid": "^9.0.0",
     "xterm": "^5.2.1",
     "xterm-addon-fit": "^0.8.0",
