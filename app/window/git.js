@@ -58,7 +58,11 @@ class Git {
   }
 
   async commit() {
-    const message = document.getElementById('commit-message').value;
+    const message = document.getElementById('commit-message').value.trim();
+    if (!message) {
+      alert('Please enter a commit message');
+      return;
+    }
     try {
       await this.git.add('.');
       const result = await this.git.commit(message);
@@ -101,6 +105,7 @@ class Git {
       colorScheme: chatController.settings.theme,
       showDiffOnly: false,
       fileContentToggle: true,
+      diffMaxChanges: 500,
     };
 
     let diff;
@@ -149,7 +154,7 @@ class Git {
               <div class="d-flex justify-content-end mb-1">
                 ${this.renderActions()}
               </div>
-              <input id="commit-message" class="form-control mb-3" placeholder="Message for &quot;${branchName.current}&quot;">
+              <input id="commit-message" class="form-control mb-3" placeholder="Message for &quot;${branchName.current}&quot;" required>
               <button id="commit-button" class="btn btn-primary w-100 ${commitButtonDisabled ? 'disabled' : ''}" onclick="chatController.agent.projectController.git?.commit();">
                 <i class="bi bi-check2-all"></i>
                 Commit all
@@ -202,7 +207,7 @@ class Git {
   }
 
   renderFileItem(file) {
-    const normalizedPath = path.normalize(file.file);
+    const normalizedPath = path.normalize(file.file).replace(/\\/g, '\\\\');
     const escapedPath = normalizedPath.replace(/"/g, '&quot;');
     return `
       <li class="list-group-item d-flex justify-content-between align-items-center p-0 ps-1" data-file="${escapedPath}">
@@ -218,22 +223,24 @@ class Git {
   }
 
   async showFileChanges(file) {
-    if (this.selectedFile === file) {
+    const normalizedFile = path.normalize(file).replace(/\\/g, '\\\\');
+    if (this.selectedFile === normalizedFile) {
       this.selectedFile = null;
       await this.showChanges();
       this.setActiveFile(null);
     } else {
-      this.selectedFile = file;
-      await this.showChanges(file);
-      this.setActiveFile(file);
+      this.selectedFile = normalizedFile;
+      await this.showChanges(file); // Note: we use the original file path here
+      this.setActiveFile(normalizedFile);
     }
   }
 
   setActiveFile(file) {
     const fileItems = document.querySelectorAll('#git_output .list-group-item');
+    const normalizedFile = file ? path.normalize(file).replace(/\\/g, '\\\\') : null;
     fileItems.forEach((item) => {
-      if (file === null || item.dataset.file === file) {
-        item.classList.toggle('active', item.dataset.file === file);
+      if (normalizedFile === null || item.dataset.file === normalizedFile) {
+        item.classList.toggle('active', item.dataset.file === normalizedFile);
       } else {
         item.classList.remove('active');
       }
