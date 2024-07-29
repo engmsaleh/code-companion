@@ -40,6 +40,11 @@ class Git {
     ];
   }
 
+  async getCurrentBranch() {
+    const branchInfo = await this.git.branch();
+    return branchInfo.current;
+  }
+
   async getDiff() {
     const status = await this.git.status();
     let diff = await this.git.diff();
@@ -77,29 +82,58 @@ class Git {
 
   async pull() {
     try {
-      const result = await this.git.pull();
+      const currentBranch = await this.getCurrentBranch();
+      const result = await this.git.pull('origin', currentBranch);
       alert(
         `Pull successful: ${result.summary.changes} file(s) changed, ${result.summary.insertions} insertion(s), ${result.summary.deletions} deletion(s)`,
       );
       await this.renderUI();
     } catch (error) {
-      alert(`Error pulling changes: ${error.message}`);
+      if (error.message.includes('ENOTFOUND')) {
+        alert(
+          'Error pulling changes: Unable to connect to the remote repository. Please check your internet connection.',
+        );
+      } else if (error.message.includes('Authentication failed')) {
+        alert('Error pulling changes: Authentication failed. Please check your credentials.');
+      } else {
+        alert(`Error pulling changes: ${error.message}`);
+      }
     }
   }
 
   async push() {
     try {
-      const result = await this.git.push();
+      const currentBranch = await this.getCurrentBranch();
+      const result = await this.git.push('origin', currentBranch);
       alert(`Push successful: ${result.pushed.length} ref(s) pushed`);
       await this.renderUI();
     } catch (error) {
-      alert(`Error pushing changes: ${error.message}`);
+      if (error.message.includes('ENOTFOUND')) {
+        alert(
+          'Error pushing changes: Unable to connect to the remote repository. Please check your internet connection.',
+        );
+      } else if (error.message.includes('Authentication failed')) {
+        alert('Error pushing changes: Authentication failed. Please check your credentials.');
+      } else {
+        alert(`Error pushing changes: ${error.message}`);
+      }
     }
   }
 
   async discardChange(file) {
     try {
-      await this.git.checkout([file]);
+      const status = await this.git.status();
+      const fileStatus = status.files.find((f) => f.path === file);
+
+      if (fileStatus && fileStatus.index === '?' && fileStatus.working_dir === '?') {
+        // Untracked file, delete it
+        const filePath = path.join(this.workingDirectory, file);
+        await fs.promises.unlink(filePath);
+      } else {
+        // Tracked file, use git checkout
+        await this.git.checkout([file]);
+      }
+
       await this.renderUI();
       return true;
     } catch (error) {
@@ -161,7 +195,7 @@ class Git {
     let changedFiles = [];
     if (await this.isGitRepository()) {
       changedFiles = await this.getChangedFiles();
-      const branchName = await this.git.branch();
+      const branchName = await this.getCurrentBranch();
       const commitButtonDisabled = changedFiles.length === 0;
       html = `
         <div id="git-commit-ui" class="container-fluid">
@@ -170,7 +204,7 @@ class Git {
               <div class="d-flex justify-content-end mb-1">
                 ${this.renderActions()}
               </div>
-              <input id="commit-message" class="form-control mb-3" placeholder="Message for &quot;${branchName.current}&quot;" required>
+              <input id="commit-message" class="form-control mb-3" placeholder="Message for &quot;${branchName}&quot;" required>
               <button id="commit-button" class="btn btn-primary w-100 ${commitButtonDisabled ? 'disabled' : ''}" onclick="chatController.agent.projectController.git?.commit();">
                 <i class="bi bi-check2-all"></i>
                 Commit all
@@ -211,6 +245,24 @@ class Git {
   renderActions() {
     return `
       <button
+        id="git-pull"
+        class="btn btn-link-secondary p-0 ms-1"
+        data-bs-toggle="tooltip"
+        data-bs-title="Pull current branch from origin"
+        onclick="chatController.agent.projectController.git?.pull();"
+      >
+        <i class="bi bi-arrow-down"></i>
+      </button>
+      <button
+        id="git-push"
+        class="btn btn-link-secondary p-0 ms-1"
+        data-bs-toggle="tooltip"
+        data-bs-title="Push current branch to origin"
+        onclick="chatController.agent.projectController.git?.push();"
+      >
+        <i class="bi bi-arrow-up"></i>
+      </button>
+      <button
         id="git-refresh"
         class="btn btn-link-secondary p-0 ms-1"
         data-bs-toggle="tooltip"
@@ -221,7 +273,6 @@ class Git {
       </button>
     `;
   }
-
   renderFileItem(file) {
     const normalizedPath = path.normalize(file.file).replace(/\\/g, '\\\\');
     const escapedPath = normalizedPath.replace(/"/g, '&quot;');
