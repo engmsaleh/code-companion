@@ -61,7 +61,10 @@ class Agent {
         }
       } else if (decision === 'reject') {
         isUserRejected = true;
-        chatController.chat.addFrontendMessage('error', 'Action was rejected');
+        chatController.chat.addFrontendMessage(
+          'error',
+          'Action was rejected. Please provide feedback below explaining why you rejected the action and suggest alternative approaches or modifications.',
+        );
         chatController.chat.addBackendMessage(
           'tool',
           `User rejected tool call: \n ${JSON.stringify(toolCall, null, 2)}`,
@@ -75,7 +78,7 @@ class Agent {
       }
     }
 
-    this.projectController.git.updateTabIcon();
+    this.projectController.git?.updateTabIcon();
     return { decision: 'approve', reflectMessage: null };
   }
 
