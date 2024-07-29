@@ -52,6 +52,7 @@ function setupLocalShortcuts() {
     { key: 'CmdOrCtrl+Shift+Down', action: () => windowManager.resizeWindow('shorter') },
     { key: 'CmdOrCtrl+W', action: () => windowManager.close() },
     { key: 'Alt+Space', action: () => win.show() },
+    { key: 'CmdOrCtrl+R', action: () => win.webContents.send('refresh-browser') },
   ];
 
   // Add Mac-specific shortcuts

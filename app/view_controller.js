@@ -276,7 +276,7 @@ class ViewController {
       tooltipTriggerEl.addEventListener('shown.bs.tooltip', () => {
         setTimeout(() => {
           tooltip.hide();
-        }, 1000);
+        }, 2000);
       });
     });
   }
