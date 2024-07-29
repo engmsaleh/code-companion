@@ -61,7 +61,10 @@ ipcRenderer.on('save-shortcut-triggered', () => {
   chatController.chat.history.showModal();
 });
 
-// Register event listeners
+ipcRenderer.on('refresh-browser', () => {
+  chatController.browser.reload();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   viewController.buildDropdown('selectedModel', modelOptions, chatController.settings.selectedModel);
   viewController.initializeUIFormatting();
