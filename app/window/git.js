@@ -66,20 +66,35 @@ class Git {
     try {
       await this.git.add('.');
       const result = await this.git.commit(message);
+      alert(
+        `Commit successful: ${result.summary.changes} file(s) changed, ${result.summary.insertions} insertion(s), ${result.summary.deletions} deletion(s)`,
+      );
       await this.renderUI();
     } catch (error) {
-      console.error(`Error committing changes:`, error);
+      alert(`Error committing changes: ${error.message}`);
     }
   }
 
   async pull() {
-    await this.git.pull();
-    await this.renderUI();
+    try {
+      const result = await this.git.pull();
+      alert(
+        `Pull successful: ${result.summary.changes} file(s) changed, ${result.summary.insertions} insertion(s), ${result.summary.deletions} deletion(s)`,
+      );
+      await this.renderUI();
+    } catch (error) {
+      alert(`Error pulling changes: ${error.message}`);
+    }
   }
 
   async push() {
-    await this.git.push();
-    await this.renderUI();
+    try {
+      const result = await this.git.push();
+      alert(`Push successful: ${result.pushed.length} ref(s) pushed`);
+      await this.renderUI();
+    } catch (error) {
+      alert(`Error pushing changes: ${error.message}`);
+    }
   }
 
   async discardChange(file) {
@@ -88,7 +103,7 @@ class Git {
       await this.renderUI();
       return true;
     } catch (error) {
-      console.error(`Error discarding changes for ${file}:`, error);
+      alert(`Error discarding changes for ${file}: ${error.message}`);
       return false;
     }
   }
@@ -110,19 +125,20 @@ class Git {
 
     let diff;
     if (selectedFile) {
-      diff = await this.git.diff([selectedFile]);
-      if (!diff) {
-        // If diff is empty, it might be a new file
-        const status = await this.git.status();
-        const fileStatus = status.files.find((f) => f.path === selectedFile);
-        if (fileStatus && fileStatus.index === '?' && fileStatus.working_dir === '?') {
-          // It's a new file, so we need to show its content
-          const content = await fs.promises.readFile(selectedFile, 'utf8');
-          diff = `diff --git a/${selectedFile} b/${selectedFile}\nnew file mode 100644\nindex 0000000..1111111\n--- /dev/null\n+++ b/${selectedFile}\n@@ -0,0 +1,${content.split('\n').length} @@\n${content
-            .split('\n')
-            .map((line) => '+' + line)
-            .join('\n')}`;
-        }
+      const status = await this.git.status();
+      const fileStatus = status.files.find((f) => f.path === selectedFile);
+
+      if (fileStatus && fileStatus.index === '?' && fileStatus.working_dir === '?') {
+        // It's a new file, so we need to show its content
+        const filePath = path.join(this.workingDirectory, selectedFile);
+        const content = await fs.promises.readFile(filePath, 'utf8');
+        diff = `diff --git a/${selectedFile} b/${selectedFile}\nnew file mode 100644\nindex 0000000..1111111\n--- /dev/null\n+++ b/${selectedFile}\n@@ -0,0 +1,${content.split('\n').length} @@\n${content
+          .split('\n')
+          .map((line) => '+' + line)
+          .join('\n')}`;
+      } else {
+        // For modified files, use git diff
+        diff = await this.git.diff([selectedFile]);
       }
     } else {
       diff = await this.getDiff();
