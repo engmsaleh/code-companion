@@ -1,6 +1,6 @@
 const { log } = require('./utils');
 
-const SYSTEM_PROMPT = 'Provide result to user task in tool call in "result" property';
+const SYSTEM_PROMPT = 'Provide result back in a tool call';
 
 class BackgroundTask {
   //  format example:
@@ -16,6 +16,14 @@ class BackgroundTask {
   }
 
   async run({ prompt, format }) {
+    if (!this.client) {
+      this.chatController.chat.addFrontendMessage(
+        'error',
+        'No API key found for small model. Please add your API key under <a href="#" onclick="document.getElementById(\'settingsToggle\').click(); return false;">Settings</a>',
+      );
+      return;
+    }
+
     try {
       const messages = this.buildMessages(prompt);
       const tool = this.buildTool(format);
@@ -43,7 +51,7 @@ class BackgroundTask {
 
   buildTool(format) {
     return {
-      name: 'json_call',
+      name: 'respond',
       parameters: {
         type: 'object',
         properties: {

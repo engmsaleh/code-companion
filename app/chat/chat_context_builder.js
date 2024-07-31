@@ -266,7 +266,11 @@ class ChatContextBuilder {
   }
 
   async getRelevantFilesAndFoldersToUserMessages() {
-    if (!this.searchRelevantFiles) {
+    if (
+      !this.searchRelevantFiles ||
+      !chatController.settings.selectedEmbeddingsModel ||
+      !chatController.agent.projectController.currentProject
+    ) {
       return '';
     }
 
@@ -290,9 +294,6 @@ class ChatContextBuilder {
       filenamesOnly: true,
     };
     const projectController = chatController.agent.projectController;
-    if (!projectController.currentProject) {
-      return '';
-    }
 
     const relevantFilesAndFolders = await projectController.searchEmbeddings(params);
     if (!relevantFilesAndFolders || relevantFilesAndFolders.length === 0) {
@@ -303,7 +304,7 @@ class ChatContextBuilder {
           return `- "${result}"`;
         })
         .join('\n');
-      return `These files might or might not be relevant to the task:\n<relevant_files_and_folders>\n${relevantFilesAndFoldersMessage}\n</relevant_files_and_folders>\n`;
+      return `These files might or might not be relevant:\n<relevant_files_and_folders>\n${relevantFilesAndFoldersMessage}\n</relevant_files_and_folders>\n`;
     }
   }
 

@@ -57,17 +57,47 @@ class ViewController {
     }
   }
 
-  buildDropdown(elementId, options, selectedOption) {
+  buildModelDropdown(elementId, options, selectedOption, includeBlank = null) {
     const select = document.getElementById(elementId);
-    Object.entries(options).forEach(([optionValue, optionText]) => {
-      const option = document.createElement('option');
-      option.value = optionValue;
-      option.innerText = optionText;
-      if (optionValue === selectedOption) {
-        option.selected = true;
+    select.innerHTML = ''; // Clear existing options
+
+    if (includeBlank !== null) {
+      const blankOption = document.createElement('option');
+      blankOption.value = '';
+      blankOption.textContent = includeBlank;
+      select.appendChild(blankOption);
+    }
+
+    const groupedModels = this.groupModelsByProvider(options);
+
+    for (const [provider, models] of Object.entries(groupedModels)) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = provider;
+
+      models.forEach((model) => {
+        const option = document.createElement('option');
+        option.value = model.model;
+        option.textContent = model.name;
+        if (model.model === selectedOption) {
+          option.selected = true;
+        }
+        optgroup.appendChild(option);
+      });
+
+      select.appendChild(optgroup);
+    }
+  }
+
+  groupModelsByProvider(models) {
+    const groupedModels = {};
+    models.forEach((model) => {
+      const provider = model.provider;
+      if (!groupedModels[provider]) {
+        groupedModels[provider] = [];
       }
-      select.appendChild(option);
+      groupedModels[provider].push(model);
     });
+    return groupedModels;
   }
 
   scrollToBottom() {
@@ -326,8 +356,8 @@ class ViewController {
         <div class="card-body">
           <h5 class="card-title">Projects</h5>
           <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Current</h6>
-          ${currentProjectContent || '<p class="text-secondary">Please select a project directory to proceed</p>'}
-          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Open project</h6>
+          ${currentProjectContent || '<p class="text-secondary">Please select a project directory to proceed.<br>Do not use the chat in the root directory. Instead, create a working directory.</p>'}
+          <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Open project (working directory)</h6>
           <a href="#" class="card-link text-decoration-none" onclick="event.preventDefault(); viewController.selectDirectory();"><i class="bi bi-folder-plus me-2"></i>Open</a>
           <h6 class="card-subtitle mt-4 mb-2 text-body-secondary">Recent</h6>
           <div class="container-fluid">

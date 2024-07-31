@@ -12,7 +12,7 @@ const ChatController = require('./app/chat_controller');
 const OnboardingController = require('./app/onboarding_controller');
 
 const { processFile, handleDrop } = require('./app/chat/file_handler');
-const { modelOptions, defaultModel } = require('./app/static/models_config');
+const { MODEL_OPTIONS, SMALL_MODEL_OPTIONS, EMBEDDINGS_MODEL_OPTIONS } = require('./app/static/models_config');
 
 const localStorage = new Store();
 const chatController = new ChatController();
@@ -66,7 +66,19 @@ ipcRenderer.on('refresh-browser', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  viewController.buildDropdown('selectedModel', modelOptions, chatController.settings.selectedModel);
+  viewController.buildModelDropdown('selectedModel', MODEL_OPTIONS, chatController.settings.selectedModel);
+  viewController.buildModelDropdown('baseModel', MODEL_OPTIONS, chatController.settings.selectedModel);
+  viewController.buildModelDropdown(
+    'selectedSmallModel',
+    SMALL_MODEL_OPTIONS,
+    chatController.settings.selectedSmallModel,
+  );
+  viewController.buildModelDropdown(
+    'selectedEmbeddingsModel',
+    EMBEDDINGS_MODEL_OPTIONS,
+    chatController.settings.selectedEmbeddingsModel,
+    'Do not use embeddings',
+  );
   viewController.initializeUIFormatting();
   viewController.changeTheme(chatController.settings.theme);
   viewController.handlePanelResize();
