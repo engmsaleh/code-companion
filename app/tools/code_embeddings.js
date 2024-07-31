@@ -8,7 +8,7 @@ const detect = require('language-detect');
 const { normalizedFilePath } = require('../utils');
 
 const { isTextFile } = require('../utils');
-const { EMBEDDINGS_VERSION, EMBEDDINGS_MODEL_NAME } = require('../static/models_config');
+const { EMBEDDINGS_VERSION } = require('../static/models_config');
 
 const detectedLanguageToSplitterMapping = {
   'C++': 'cpp',
@@ -32,13 +32,14 @@ const detectedLanguageToSplitterMapping = {
 const MAX_FILE_SIZE = 30000;
 
 class CodeEmbeddings {
-  constructor(projectName, openAIApiKey) {
+  constructor(projectName, openAIApiKey, selectedEmbeddingsModel) {
     this.projectName = projectName;
     this.openAIApiKey = openAIApiKey;
+    this.selectedEmbeddingsModel = selectedEmbeddingsModel;
     this.vectorStore = new MemoryVectorStore(
       new OpenAIEmbeddings({
         openAIApiKey,
-        modelName: EMBEDDINGS_MODEL_NAME,
+        modelName: selectedEmbeddingsModel,
         maxRetries: 5,
         timeout: 5 * 60 * 1000,
       }),
@@ -104,7 +105,7 @@ class CodeEmbeddings {
       return false;
     }
 
-    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION;
+    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION + this.selectedEmbeddingsModel;
     const fileRecords = this.findRecords(filePath);
     if (fileRecords.length === 0) return true;
 
@@ -119,7 +120,7 @@ class CodeEmbeddings {
       return;
     }
 
-    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION;
+    const hash = CryptoJS.SHA256(fileContent).toString() + EMBEDDINGS_VERSION + this.selectedEmbeddingsModel;
     this.deleteRecords(filePath);
 
     const metadata = {

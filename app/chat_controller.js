@@ -11,14 +11,16 @@ const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
 const AnthropicModel = require('./models/anthropic');
-const { defaultModel, defaultOpenAISmallModel, defaultAnthropicSmallModel } = require('./static/models_config');
+const { DEFAULT_LARGE_MODEL, DEFAULT_SMALL_MODEL, DEFAULT_EMBEDDINGS_MODEL } = require('./static/models_config');
 const { allEnabledTools, planningTools } = require('./tools/tools');
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
   anthropicApiKey: '',
   baseUrl: '',
-  selectedModel: defaultModel,
+  selectedModel: DEFAULT_LARGE_MODEL,
+  selectedSmallModel: DEFAULT_SMALL_MODEL,
+  selectedEmbeddingsModel: DEFAULT_EMBEDDINGS_MODEL,
   approvalRequired: true,
   maxFilesToEmbed: 1000,
   commandToOpenFile: 'code',
@@ -54,55 +56,46 @@ class ChatController {
   }
 
   initializeModel() {
-    let apiKey;
-    let AIModel;
-
     this.model = null;
-
-    if (!this.settings.selectedModel.toLowerCase().includes('claude')) {
-      apiKey = this.settings.apiKey;
-      AIModel = OpenAIModel;
-    } else {
-      apiKey = this.settings.anthropicApiKey;
-      AIModel = AnthropicModel;
-    }
-
-    if (!apiKey) {
-      return;
-    }
-
+    this.smallModel = null;
     this.abortController = new AbortController();
-    this.model = new AIModel({
-      apiKey,
-      model: this.settings.selectedModel,
-      baseUrl: this.settings.baseUrl,
-      chatController: this,
-      streamCallback: (snapshot) => {
-        this.chat.updateStreamingMessage(snapshot);
-      },
+    this.model = this.createModel(this.settings.selectedModel, (snapshot) => {
+      this.chat.updateStreamingMessage(snapshot);
     });
-    this.initializeSmallModel();
+    this.smallModel = this.createModel(this.settings.selectedSmallModel);
     this.backgroundTask = new BackgroundTask(this);
   }
 
-  initializeSmallModel() {
-    if (this.settings.apiKey) {
-      this.smallModel = new OpenAIModel({
-        apiKey: this.settings.apiKey,
-        model: defaultOpenAISmallModel,
-        chatController: this,
-      });
-    } else if (this.settings.anthropicApiKey) {
-      this.smallModel = new AnthropicModel({
-        apiKey: this.settings.anthropicApiKey,
-        model: defaultAnthropicSmallModel,
-        chatController: this,
-      });
+  createModel(selectedModel, streamCallback) {
+    let apiKey;
+    let baseUrl;
+    let AIModel;
+    const modelOptions = [...MODEL_OPTIONS, ...SMALL_MODEL_OPTIONS];
+
+    if (modelOptions.find((option) => option.model === selectedModel)?.provider === 'Anthropic') {
+      apiKey = this.settings.anthropicApiKey;
+      AIModel = AnthropicModel;
+    } else {
+      apiKey = this.settings.apiKey;
+      baseUrl = this.settings.baseUrl;
+      AIModel = OpenAIModel;
     }
+
+    if (!apiKey) return;
+
+    return new AIModel({
+      apiKey,
+      model: selectedModel,
+      baseUrl,
+      chatController: this,
+      streamCallback,
+    });
   }
 
   renderSettingValueInUI(key, value) {
     let element = document.getElementById(key);
+    if (!element) return;
+
     if (element.type === 'checkbox') {
       element.checked = value;
     } else {
@@ -116,18 +109,15 @@ class ChatController {
     return this.settings[key];
   }
 
-  saveSetting(key, value = null) {
-    const element = document.getElementById(key);
+  saveSetting(key, value = null, elementId = null) {
+    const element = elementId ? document.getElementById(elementId) : document.getElementById(key);
     if (value === null) {
       element.type === 'checkbox' ? (value = element.checked) : (value = element.value);
     }
     localStorage.set(key, value);
     this.settings[key] = value;
     this.renderSettingValueInUI(key, value);
-
-    if (key === 'apiKey' || key === 'baseUrl' || key === 'anthropicApiKey' || key === 'selectedModel') {
-      this.initializeModel();
-    }
+    this.initializeModel();
   }
 
   handleError(error) {
@@ -166,7 +156,7 @@ class ChatController {
     if (!this.model) {
       this.chat.addFrontendMessage(
         'error',
-        'Please add your API key under settings menu (<i class="bi bi-gear bg-body border-0"></i>)',
+        'No API key found for base model. Please add your API key under <a href="#" onclick="document.getElementById(\'settingsToggle\').click(); return false;">Settings</a>',
       );
       return;
     }

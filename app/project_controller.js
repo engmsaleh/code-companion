@@ -121,13 +121,21 @@ class ProjectController {
   }
 
   async createEmbeddings() {
+    if (!chatController.settings.selectedEmbeddingsModel) {
+      return;
+    }
+
     const openAIApiKey = chatController.settings.apiKey;
     if (!openAIApiKey) {
       return;
     }
 
     if (!this.embeddings) {
-      this.embeddings = new CodeEmbeddings(this.currentProject.name, openAIApiKey);
+      this.embeddings = new CodeEmbeddings(
+        this.currentProject.name,
+        openAIApiKey,
+        chatController.settings.selectedEmbeddingsModel,
+      );
       await this.embeddings.load();
     }
 
@@ -159,6 +167,14 @@ class ProjectController {
   }
 
   async searchEmbeddings({ query, count = 10, rerank = true, filenamesOnly = false }) {
+    if (!chatController.settings.selectedEmbeddingsModel) {
+      chatController.chat.addFrontendMessage(
+        'error',
+        `No embeddings model selected. Please select an embeddings model under settings.`,
+      );
+      return;
+    }
+
     if (!this.currentProject) {
       chatController.chat.addFrontendMessage('error', `No project is open. To use search, open a project first.`);
       return;
@@ -273,7 +289,11 @@ class ProjectController {
 
   async getFileHash(filePath) {
     const fileBuffer = await fs.promises.readFile(filePath);
-    return CryptoJS.SHA256(fileBuffer.toString()).toString() + EMBEDDINGS_VERSION;
+    return (
+      CryptoJS.SHA256(fileBuffer.toString()).toString() +
+      EMBEDDINGS_VERSION +
+      chatController.settings.selectedEmbeddingsModel
+    );
   }
 
   async getFilesHash() {
@@ -283,6 +303,7 @@ class ProjectController {
     return (
       CryptoJS.SHA256(hashes.join('')).toString() +
       EMBEDDINGS_VERSION +
+      chatController.settings.selectedEmbeddingsModel +
       chatController.settings.maxFilesToEmbed.toString()
     );
   }
