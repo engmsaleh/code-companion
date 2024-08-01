@@ -6,13 +6,14 @@ const autosize = require('autosize');
 const Agent = require('./chat/agent');
 const Chat = require('./chat/chat');
 const TerminalSession = require('./tools/terminal_session');
-const Browser = require('./window/browser');
+const Browser = require('./chat/tabs/browser');
 const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
 const AnthropicModel = require('./models/anthropic');
 const { DEFAULT_LARGE_MODEL, DEFAULT_SMALL_MODEL, DEFAULT_EMBEDDINGS_MODEL } = require('./static/models_config');
 const { allEnabledTools, planningTools } = require('./tools/tools');
+const CustomModelsManager = require('./chat/custom_models');
 
 const DEFAULT_SETTINGS = {
   apiKey: '',
@@ -32,6 +33,7 @@ class ChatController {
   constructor() {
     this.stopProcess = false;
     this.isProcessing = false;
+    this.customModelsManager = new CustomModelsManager();
     this.loadAllSettings();
     this.initializeModel();
     this.chat = new Chat();
@@ -72,7 +74,7 @@ class ChatController {
     let baseUrl;
     let AIModel;
     let defaultHeaders;
-    const modelOptions = [...MODEL_OPTIONS, ...SMALL_MODEL_OPTIONS];
+    const modelOptions = [...MODEL_OPTIONS, ...SMALL_MODEL_OPTIONS, ...this.customModelsManager.getCustomModels()];
 
     const selectedOption = modelOptions.find((option) => option.model === selectedModel);
     if (selectedOption?.provider === 'Anthropic') {

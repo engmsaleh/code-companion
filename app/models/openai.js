@@ -92,7 +92,7 @@ class OpenAIModel {
       signal: this.chatController.abortController.signal,
     });
     log('Raw response', chatCompletion);
-    const { result } = JSON.parse(chatCompletion.choices[0].message.tool_calls[0].function.arguments);
+    const { result } = this.parseJSONSafely(chatCompletion.choices[0].message.tool_calls[0].function.arguments);
     return {
       content: result,
       usage: {
@@ -108,7 +108,7 @@ class OpenAIModel {
     let parsedToolCalls = [];
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
-      const args = JSON.parse(toolCall.function.arguments);
+      const args = this.parseJSONSafely(toolCall.function.arguments);
       parsedToolCalls.push({
         function: {
           name: functionName,
@@ -117,6 +117,19 @@ class OpenAIModel {
       });
     }
     return parsedToolCalls;
+  }
+
+  parseJSONSafely(str) {
+    if (typeof str === 'object' && str !== null) {
+      return str; // Already a JSON object, return as is
+    }
+
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      console.error('Failed to parse JSON:', str);
+      throw new Error('Failed to parse response from model, invalid response format. Click Retry to try again.');
+    }
   }
 
   openAiToolFormat(tool) {
