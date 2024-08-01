@@ -8,7 +8,7 @@
 >
   <head>
     <meta charset="UTF-8" />
-    <title>CodeCompanion.AI</title>
+    <title>CodeCompanion</title>
     <meta
       http-equiv="Content-Security-Policy"
       content="img-src 'self' data:; font-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; style-src-elem * 'unsafe-inline'"
@@ -458,6 +458,15 @@
                   placeholder="Anthropic API Key"
                   onchange="chatController.saveSetting('anthropicApiKey');"
                 />
+
+                <label for="openRouterApiKey" class="form-label mt-3 fw-bolder">OpenRouter API Key:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="openRouterApiKey"
+                  placeholder="OpenRouter API Key"
+                  onchange="chatController.saveSetting('openRouterApiKey');"
+                />
               </div>
 
               <div
@@ -520,12 +529,12 @@
             <span class="text-secondary mx-2">|</span>
             <span>
               <span class="text-secondary mx-2">hello@codecompanion.ai</span>
-              <a href="https://www.x.com/codecompanionai" target="_blank" class="text-secondary mx-2">
-                <i class="bi bi-twitter"></i>
-              </a>
-              <a href="https://www.discord.com/invite/qcTqDgqy6R" target="_blank" class="text-secondary mx-2">
-                <i class="bi bi-discord"></i>
-              </a>
+              <a href="https://www.x.com/codecompanionai" target="_blank" class="text-secondary mx-2"
+                ><i class="bi bi-twitter"></i
+              ></a>
+              <a href="https://www.discord.com/invite/qcTqDgqy6R" target="_blank" class="text-secondary mx-2"
+                ><i class="bi bi-discord"></i
+              ></a>
             </span>
           </div>
         </div>

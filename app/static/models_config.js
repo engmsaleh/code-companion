@@ -5,11 +5,18 @@ const MODEL_OPTIONS = [
   { provider: 'OpenAI', model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
   { provider: 'Anthropic', model: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (Recommended)' },
   { provider: 'Anthropic', model: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
+  {
+    provider: 'OpenRouter',
+    model: 'anthropic/claude-3.5-sonnet:beta',
+    name: 'anthropic/claude-3.5-sonnet:beta',
+  },
+  { provider: 'OpenRouter', model: 'openai/gpt-4o-mini', name: 'openai/gpt-4o-mini' },
 ];
 
 const SMALL_MODEL_OPTIONS = [
   { provider: 'OpenAI', model: 'gpt-4o-mini', name: 'GPT-4o Mini (Recommended)' },
   { provider: 'Anthropic', model: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
+  { provider: 'OpenRouter', model: 'openai/gpt-4o-mini', name: 'openai/gpt-4o-mini' },
 ];
 
 const EMBEDDINGS_MODEL_OPTIONS = [
