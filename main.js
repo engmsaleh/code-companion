@@ -19,7 +19,7 @@ const pty = require('node-pty');
 const { debounce } = require('lodash');
 const Sentry = require('@sentry/electron');
 const { initialize } = require('@aptabase/electron/main'); // for DAU tracking
-const WindowManager = require('./app/window/WindowManager');
+const WindowManager = require('./app/window_manager');
 
 ElectronStore.initRenderer();
 const localStorage = new ElectronStore();

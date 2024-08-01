@@ -66,24 +66,13 @@ ipcRenderer.on('refresh-browser', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  viewController.buildModelDropdown('selectedModel', MODEL_OPTIONS, chatController.settings.selectedModel);
-  viewController.buildModelDropdown('baseModel', MODEL_OPTIONS, chatController.settings.selectedModel);
-  viewController.buildModelDropdown(
-    'selectedSmallModel',
-    SMALL_MODEL_OPTIONS,
-    chatController.settings.selectedSmallModel,
-  );
-  viewController.buildModelDropdown(
-    'selectedEmbeddingsModel',
-    EMBEDDINGS_MODEL_OPTIONS,
-    chatController.settings.selectedEmbeddingsModel,
-    'Do not use embeddings',
-  );
+  viewController.renderModelDropdowns();
   viewController.initializeUIFormatting();
   viewController.changeTheme(chatController.settings.theme);
   viewController.handlePanelResize();
   chatController.clearChat();
   onboardingController.showAllTips();
+  chatController.customModelsManager.render();
 });
 
 ipcRenderer.on('download-logs', () => {

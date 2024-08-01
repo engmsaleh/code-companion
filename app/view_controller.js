@@ -57,6 +57,21 @@ class ViewController {
     }
   }
 
+  renderModelDropdowns() {
+    const customModels = chatController.customModelsManager.getCustomModels();
+    const largeModelOptions = MODEL_OPTIONS.concat(customModels);
+    const smallModelOptions = SMALL_MODEL_OPTIONS.concat(customModels);
+    this.buildModelDropdown('selectedModel', largeModelOptions, chatController.settings.selectedModel);
+    this.buildModelDropdown('baseModel', largeModelOptions, chatController.settings.selectedModel);
+    this.buildModelDropdown('selectedSmallModel', smallModelOptions, chatController.settings.selectedSmallModel);
+    this.buildModelDropdown(
+      'selectedEmbeddingsModel',
+      EMBEDDINGS_MODEL_OPTIONS,
+      chatController.settings.selectedEmbeddingsModel,
+      'Do not use embeddings',
+    );
+  }
+
   buildModelDropdown(elementId, options, selectedOption, includeBlank = null) {
     const select = document.getElementById(elementId);
     select.innerHTML = ''; // Clear existing options
