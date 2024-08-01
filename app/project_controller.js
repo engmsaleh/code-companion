@@ -54,7 +54,7 @@ class ProjectController {
       console.error('No terminal session');
     }
     this.currentProject = project;
-    document.title = project.name + ' - CodeCompanion.AI';
+    document.title = project.name + ' - CodeCompanion';
     viewController.showWelcomeContent();
     this.git = new Git(project.path);
   }

@@ -17,6 +17,7 @@ const { allEnabledTools, planningTools } = require('./tools/tools');
 const DEFAULT_SETTINGS = {
   apiKey: '',
   anthropicApiKey: '',
+  openRouterApiKey: '',
   baseUrl: '',
   selectedModel: DEFAULT_LARGE_MODEL,
   selectedSmallModel: DEFAULT_SMALL_MODEL,
@@ -70,11 +71,21 @@ class ChatController {
     let apiKey;
     let baseUrl;
     let AIModel;
+    let defaultHeaders;
     const modelOptions = [...MODEL_OPTIONS, ...SMALL_MODEL_OPTIONS];
 
-    if (modelOptions.find((option) => option.model === selectedModel)?.provider === 'Anthropic') {
+    const selectedOption = modelOptions.find((option) => option.model === selectedModel);
+    if (selectedOption?.provider === 'Anthropic') {
       apiKey = this.settings.anthropicApiKey;
       AIModel = AnthropicModel;
+    } else if (selectedOption?.provider === 'OpenRouter') {
+      defaultHeaders = {
+        'HTTP-Referer': 'https://codecompanion.ai/',
+        'X-Title': 'CodeCompanion',
+      };
+      apiKey = this.settings.openRouterApiKey;
+      baseUrl = 'https://openrouter.ai/api/v1';
+      AIModel = OpenAIModel;
     } else {
       apiKey = this.settings.apiKey;
       baseUrl = this.settings.baseUrl;
@@ -89,6 +100,7 @@ class ChatController {
       baseUrl,
       chatController: this,
       streamCallback,
+      defaultHeaders,
     });
   }
 

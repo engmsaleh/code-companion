@@ -4,7 +4,7 @@ const { log, getTokenCount } = require('../utils');
 const MAX_RETRIES = 5;
 
 class OpenAIModel {
-  constructor({ model, apiKey, baseUrl, streamCallback, chatController }) {
+  constructor({ model, apiKey, baseUrl, streamCallback, chatController, defaultHeaders }) {
     this.model = model;
     this.chatController = chatController;
     const config = {
@@ -14,6 +14,9 @@ class OpenAIModel {
     };
     if (baseUrl) {
       config.baseURL = baseUrl;
+    }
+    if (defaultHeaders) {
+      config.defaultHeaders = defaultHeaders;
     }
     this.client = new OpenAI(config);
     this.streamCallback = streamCallback;
@@ -38,22 +41,47 @@ class OpenAIModel {
   async stream(callParams) {
     callParams.stream = true;
     log('Calling model API:', callParams);
-    const stream = this.client.beta.chat.completions.stream(callParams, {
+    const stream = await this.client.chat.completions.create(callParams, {
       signal: this.chatController.abortController.signal,
     });
-    stream.on('content', (_delta, snapshot) => {
-      this.streamCallback(snapshot);
-    });
-    const chatCompletion = await stream.finalChatCompletion();
-    log('Raw response', chatCompletion);
+
+    let fullContent = '';
+    let toolCalls = [];
+
+    for await (const part of stream) {
+      if (part.choices[0]?.delta?.content) {
+        fullContent += part.choices[0].delta.content;
+        this.streamCallback(fullContent);
+      }
+      if (part.choices[0]?.delta?.tool_calls) {
+        toolCalls = this.accumulateToolCalls(toolCalls, part.choices[0].delta.tool_calls);
+      }
+    }
+    log('Raw response', fullContent, toolCalls);
+
     return {
-      content: chatCompletion.choices[0].message.content,
-      tool_calls: this.formattedToolCalls(chatCompletion.choices[0].message.tool_calls),
+      content: fullContent,
+      tool_calls: this.formattedToolCalls(toolCalls),
       usage: {
         input_tokens: getTokenCount(callParams.messages),
-        output_tokens: getTokenCount(chatCompletion.choices[0].message),
+        output_tokens: getTokenCount(fullContent),
       },
     };
+  }
+
+  accumulateToolCalls(existingCalls, newCalls) {
+    newCalls.forEach((newCall, index) => {
+      if (!existingCalls[index]) {
+        existingCalls[index] = { function: { name: '', arguments: '' } };
+      }
+      if (newCall.function?.name) {
+        existingCalls[index].function.name = newCall.function.name;
+      }
+      if (newCall.function?.arguments) {
+        existingCalls[index].function.arguments += newCall.function.arguments;
+      }
+    });
+    return existingCalls;
   }
 
   async toolUse(callParams, tool) {
