@@ -70,7 +70,8 @@ class OpenAIModel {
   }
 
   accumulateToolCalls(existingCalls, newCalls) {
-    newCalls.forEach((newCall, index) => {
+    newCalls.forEach((newCall) => {
+      const index = newCall.index;
       if (!existingCalls[index]) {
         existingCalls[index] = { function: { name: '', arguments: '' } };
       }
@@ -103,20 +104,16 @@ class OpenAIModel {
   }
 
   formattedToolCalls(toolCalls) {
-    if (!toolCalls) return null;
+    if (!toolCalls || toolCalls.length === 0) return null;
 
-    let parsedToolCalls = [];
-    for (const toolCall of toolCalls) {
-      const functionName = toolCall.function.name;
-      const args = this.parseJSONSafely(toolCall.function.arguments);
-      parsedToolCalls.push({
+    return toolCalls
+      .filter((call) => call !== null)
+      .map((toolCall) => ({
         function: {
-          name: functionName,
-          arguments: args,
+          name: toolCall.function.name,
+          arguments: this.parseJSONSafely(toolCall.function.arguments),
         },
-      });
-    }
-    return parsedToolCalls;
+      }));
   }
 
   parseJSONSafely(str) {
