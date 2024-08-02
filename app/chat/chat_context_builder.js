@@ -192,8 +192,8 @@ class ChatContextBuilder {
     let content = [];
 
     if (messageContent) {
-      if (removeCodeDiff && messageContent && messageContent.includes('<code diff>')) {
-        messageContent = messageContent.replace(/<code diff>[\s\S]*<\/code diff>/g, '');
+      if (removeCodeDiff && messageContent && messageContent.includes('<changes_made_to_file>')) {
+        messageContent = messageContent.replace(/<changes_made_to_file>[\s\S]*<\/changes_made_to_file>/g, '');
       }
       content.push({
         type: message.role === 'tool' ? 'tool_result' : 'text',
