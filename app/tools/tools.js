@@ -69,8 +69,7 @@ const toolDefinitions = [
         },
         endLineNumber: {
           type: 'integer',
-          description:
-            'The line number where the replacement should end (inclusive). Must be greater than startLineNumber.',
+          description: 'The line number where the replacement should end (inclusive).',
         },
         replaceWith: {
           type: 'string',
@@ -100,7 +99,7 @@ const toolDefinitions = [
   },
   {
     name: 'run_shell_command',
-    description: 'Run a single shell command',
+    description: 'Run a single shell command suitable for the {shellType} shell',
     parameters: {
       type: 'object',
       properties: {
@@ -261,7 +260,7 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
     return doesntExistMessage;
   }
 
-  if (startLineNumber < 1 || startLineNumber > endLineNumber) {
+  if (startLineNumber < 1) {
     const invalidRangeMessage = `Invalid line range: ${startLineNumber}-${endLineNumber}`;
     chatController.chat.addFrontendMessage('function', invalidRangeMessage);
     return invalidRangeMessage;
@@ -278,7 +277,7 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
   const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
   chatController.chat.addFrontendMessage('function', successMessage);
 
-  return `File ${filePath} updated successfully.\n<code diff>${codeDiff}</code diff>`;
+  return `File ${filePath} updated successfully.\n<changes_made_to_file>${codeDiff}</changes_made_to_file>`;
 }
 
 async function codeAfterReplace({ targetFile, startLineNumber, endLineNumber, replaceWith }) {
@@ -496,9 +495,12 @@ function respondTargetFileNotProvided() {
 }
 
 function getEnabledTools(filterFn) {
-  return toolDefinitions
-    .filter(filterFn)
-    .map(({ name, description, parameters }) => ({ name, description, parameters }));
+  const shellType = chatController.terminalSession.shellType;
+  return toolDefinitions.filter(filterFn).map(({ name, description, parameters }) => ({
+    name,
+    description: description.replace('{shellType}', shellType),
+    parameters,
+  }));
 }
 
 function allEnabledTools() {
