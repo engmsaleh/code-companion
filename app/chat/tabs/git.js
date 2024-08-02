@@ -2,6 +2,7 @@ const simpleGit = require('simple-git');
 const fs = require('graceful-fs');
 const path = require('path');
 const { Diff2HtmlUI } = require('diff2html/lib/ui/js/diff2html-ui');
+const diff = require('diff');
 
 class Git {
   constructor(workingDirectory) {
@@ -46,20 +47,7 @@ class Git {
   }
 
   async getDiff() {
-    const status = await this.git.status();
-    let diff = await this.git.diff();
-
-    // Add untracked files to the diff
-    for (const file of status.not_added) {
-      const filePath = path.join(this.workingDirectory, file);
-      const content = await fs.promises.readFile(filePath, 'utf8');
-      diff += `\ndiff --git a/${file} b/${file}\nnew file mode 100644\nindex 0000000..${Buffer.from(content).toString('hex').slice(0, 7)}\n--- /dev/null\n+++ b/${file}\n@@ -0,0 +1,${content.split('\n').length} @@\n${content
-        .split('\n')
-        .map((line) => `+${line}`)
-        .join('\n')}`;
-    }
-
-    return diff;
+    return this.git.diff(['HEAD']);
   }
 
   async commit() {
@@ -157,35 +145,47 @@ class Git {
       diffMaxChanges: 500,
     };
 
-    let diff;
+    let diffResult;
     if (selectedFile) {
       const status = await this.git.status();
       const fileStatus = status.files.find((f) => f.path === selectedFile);
 
-      if (fileStatus && fileStatus.index === '?' && fileStatus.working_dir === '?') {
-        // It's a new file, so we need to show its content
+      if (fileStatus) {
         const filePath = path.join(this.workingDirectory, selectedFile);
-        const content = await fs.promises.readFile(filePath, 'utf8');
-        diff = `diff --git a/${selectedFile} b/${selectedFile}\nnew file mode 100644\nindex 0000000..1111111\n--- /dev/null\n+++ b/${selectedFile}\n@@ -0,0 +1,${content.split('\n').length} @@\n${content
-          .split('\n')
-          .map((line) => '+' + line)
-          .join('\n')}`;
-      } else {
-        // For modified files, use git diff
-        diff = await this.git.diff([selectedFile]);
+        let oldContent = '';
+        let newContent = '';
+
+        if (fileStatus.index === '?' && fileStatus.working_dir === '?') {
+          // New file
+          newContent = await fs.promises.readFile(filePath, 'utf8');
+        } else if (fileStatus.working_dir === 'D') {
+          // Deleted file
+          oldContent = await this.git.show(['HEAD:' + selectedFile]);
+        } else {
+          // Modified file
+          oldContent = await this.git.show(['HEAD:' + selectedFile]);
+          newContent = await fs.promises.readFile(filePath, 'utf8');
+        }
+
+        diffResult = diff.createPatch(selectedFile, oldContent, newContent);
       }
     } else {
-      diff = await this.getDiff();
+      // If no specific file is selected, show all changes
+      diffResult = await this.getDiff();
     }
 
-    if (!diff) {
+    this.renderDiff(diffResult, diffConfig);
+  }
+
+  renderDiff(diffResult, diffConfig) {
+    if (!diffResult) {
       document.getElementById('diff-display').innerHTML =
         '<p class="text-secondary text-center mt-5">No changes to display</p>';
       return;
     }
 
     const targetElement = document.getElementById('diff-display');
-    const diff2htmlUi = new Diff2HtmlUI(targetElement, diff, diffConfig);
+    const diff2htmlUi = new Diff2HtmlUI(targetElement, diffResult, diffConfig);
     diff2htmlUi.draw();
     diff2htmlUi.highlightCode();
   }
@@ -273,6 +273,7 @@ class Git {
       </button>
     `;
   }
+
   renderFileItem(file) {
     const normalizedPath = path.normalize(file.file).replace(/\\/g, '\\\\');
     const escapedPath = normalizedPath.replace(/"/g, '&quot;');

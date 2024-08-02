@@ -9,18 +9,35 @@ class ViewController {
   initializeUIFormatting() {
     const renderer = new marked.Renderer();
 
-    // Override the code method of the renderer
     renderer.code = function (code, language) {
+      if (typeof code === 'object' && code.type === 'code') {
+        language = code.lang || '';
+        code = code.text || '';
+      }
+
+      if (typeof code !== 'string') {
+        code = '';
+      }
+
       if (language && language === 'diff') {
         const diffContainer = document.createElement('div');
         diffContainer.className = 'diff-container';
         drawDiff(diffContainer, code);
         return diffContainer.outerHTML;
       }
-      if (language && hljs.getLanguage(language)) {
-        return `<pre class="hljs rounded border ${language}"><code>${hljs.highlight(code, { language }).value}</code></pre>`;
+
+      let highlightedCode;
+      try {
+        if (language && hljs.getLanguage(language)) {
+          highlightedCode = hljs.highlight(code, { language }).value;
+        } else {
+          highlightedCode = hljs.highlightAuto(code).value;
+        }
+      } catch (error) {
+        highlightedCode = code; // Fallback to raw code if highlighting fails
       }
-      return `<pre class="hljs rounded border"><code>${hljs.highlightAuto(code).value}</code></pre>`;
+
+      return `<pre class="hljs rounded border ${language || ''}"><code>${highlightedCode}</code></pre>`;
     };
 
     // Set options for marked

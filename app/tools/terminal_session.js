@@ -1,9 +1,9 @@
 const path = require('path');
 const fs = require('graceful-fs');
-const { Terminal } = require('xterm');
-const { FitAddon } = require('xterm-addon-fit');
-const { WebLinksAddon } = require('xterm-addon-web-links');
-const { Unicode11Addon } = require('xterm-addon-unicode11');
+const { Terminal } = require('@xterm/xterm');
+const { FitAddon } = require('@xterm/addon-fit');
+const { WebLinksAddon } = require('@xterm/addon-web-links');
+const { Unicode11Addon } = require('@xterm/addon-unicode11');
 const { ipcRenderer, shell } = require('electron');
 const { debounce } = require('lodash');
 const { withTimeout, log } = require('../utils');
