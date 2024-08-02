@@ -19,7 +19,7 @@ const toolDefinitions = [
         url: {
           type: 'string',
           description:
-            'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path',
+            'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path. Use data: URL to create visualizations, charts, etc.',
         },
         include_screenshot: {
           type: 'boolean',
@@ -216,7 +216,6 @@ function taskPlanningDone() {
 }
 
 async function browser({ include_screenshot, url }) {
-  let userScreenshotMessage = '';
   let assistantScreenshotMessage = '';
 
   viewController.updateLoadingIndicator(true, 'Waiting for the page to load...');
@@ -226,11 +225,10 @@ async function browser({ include_screenshot, url }) {
   if (include_screenshot) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     await chatController.browser.handleSreenshot();
-    userScreenshotMessage = ` and took a screenshot of`;
     assistantScreenshotMessage = `\nScreenshot of the webpage was taken and attached in the user message`;
   }
-  chatController.chat.addFrontendMessage('function', `Opened URL ${userScreenshotMessage}: ${url}`);
-  return `Browser loaded URL: ${url}\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
+  chatController.chat.addFrontendMessage('function', 'Opened in browser');
+  return `Browser loaded URL: ${url.startsWith('data:') ? 'Data URL provided' : url}\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
 }
 
 async function createFile({ targetFile, createText }) {
