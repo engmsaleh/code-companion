@@ -18,8 +18,8 @@ const toolDefinitions = [
       properties: {
         url: {
           type: 'string',
-          description:
-            'Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path. Use data: URL to create visualizations, charts, etc.',
+          description: `Use full URL, including protocol (e.g., http://, https://). For local files like index.html, use file:// protocol and absolute file path.
+            Always use data: URL to create visualizations, charts, etc. Do not create an html file for a visualization.`,
         },
         include_screenshot: {
           type: 'boolean',
@@ -228,7 +228,7 @@ async function browser({ include_screenshot, url }) {
     assistantScreenshotMessage = `\nScreenshot of the webpage was taken and attached in the user message`;
   }
   chatController.chat.addFrontendMessage('function', 'Opened in browser');
-  return `Browser loaded URL: ${url.startsWith('data:') ? 'Data URL provided' : url}\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
+  return `Browser opened ${url.startsWith('data:') ? 'data URL to show visualization' : url}.\n<console_output>${consoleOutput}</console_output>${assistantScreenshotMessage}`;
 }
 
 async function createFile({ targetFile, createText }) {
