@@ -35,7 +35,7 @@ class Browser {
   }
 
   updateUrlInput(url) {
-    if (url !== 'about:blank') {
+    if (url !== 'about:blank' && !url.startsWith('data:')) {
       this.currentUrl = url;
       this.urlInput.value = url;
     }
@@ -60,10 +60,16 @@ class Browser {
 
   async loadUrl(url) {
     this.webview.style.backgroundColor = 'white';
-    if (!url.startsWith('http') && !url.startsWith('file') && !url.startsWith('about') && !url.startsWith('chrome')) {
+    if (
+      !url.startsWith('http') &&
+      !url.startsWith('file') &&
+      !url.startsWith('about') &&
+      !url.startsWith('chrome') &&
+      !url.startsWith('data')
+    ) {
       url = 'http://' + url;
     }
-    this.urlInput.value = url;
+    this.urlInput.value = url.startsWith('data:') ? '' : url;
     this.currentUrl = url;
     return await this.waitForPageLoadAndCollectOutput(url);
   }
