@@ -9,11 +9,12 @@ const {
 const { withErrorHandling, getSystemInfo, isTextFile } = require('../utils');
 const { normalizedFilePath } = require('../utils');
 const ignorePatterns = require('../static/embeddings_ignore_patterns');
+const { log } = require('../utils');
 
 const MAX_SUMMARY_TOKENS = 2000;
 const MAX_RELEVANT_FILES_TOKENS = 10000;
 const MAX_RELEVANT_FILES_COUNT = 7;
-const MAX_FILE_SIZE = 30000;
+const MAX_FILE_SIZE = 100000;
 const SUMMARIZE_MESSAGES_THRESHOLD = 6; // Last n message will be left as is
 
 class ChatContextBuilder {
@@ -424,15 +425,17 @@ class ChatContextBuilder {
   async readFile(filePath) {
     try {
       const stats = await fs.promises.stat(filePath);
-      if (!isTextFile(filePath) || stats.size > MAX_FILE_SIZE) {
-        console.error(`Skipped file (non-text or too large): ${filePath}`);
-        return null;
+      const isText = isTextFile(filePath);
+      const isLarge = stats.size > MAX_FILE_SIZE;
+      if (!isText || isLarge) {
+        log(`Skipped file (${isText ? 'non-text' : 'too large'}): ${filePath}`);
+        return isText ? 'File is too large to read' : 'File is not a text file, skipping reading';
       }
       const content = await fs.promises.readFile(filePath, 'utf8');
       return this.addLineNumbers(content);
     } catch (error) {
-      console.error(`Error reading file ${filePath}:`, error);
-      return null;
+      log(`Error reading file ${filePath}:`, error);
+      return `Error reading file: ${error}`;
     }
   }
 
