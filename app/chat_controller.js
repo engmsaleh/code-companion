@@ -11,6 +11,7 @@ const { trackEvent } = require('@aptabase/electron/renderer');
 const BackgroundTask = require('./background_task');
 const OpenAIModel = require('./models/openai');
 const AnthropicModel = require('./models/anthropic');
+const AWSBedrockModel = require('./models/aws_bedrock');
 const { DEFAULT_LARGE_MODEL, DEFAULT_SMALL_MODEL, DEFAULT_EMBEDDINGS_MODEL } = require('./static/models_config');
 const { allEnabledTools, planningTools } = require('./tools/tools');
 const CustomModelsManager = require('./chat/custom_models');
@@ -27,6 +28,9 @@ const DEFAULT_SETTINGS = {
   maxFilesToEmbed: 1000,
   commandToOpenFile: 'code',
   theme: 'dark',
+  awsAccessKeyId: '',
+  awsSecretAccessKey: '',
+  awsRegion: '',
 };
 
 class ChatController {
@@ -88,6 +92,21 @@ class ChatController {
       apiKey = this.settings.openRouterApiKey;
       baseUrl = 'https://openrouter.ai/api/v1';
       AIModel = OpenAIModel;
+    } else if (selectedOption?.provider === 'AWS') {
+      AIModel = AWSBedrockModel;
+      console.log('Creating AWS Bedrock Model with settings:', {
+        awsAccessKeyId: this.settings.awsAccessKeyId,
+        awsSecretAccessKey: this.settings.awsSecretAccessKey,
+        awsRegion: this.settings.awsRegion,
+      });
+      return new AIModel({
+        model: selectedModel,
+        accessKeyId: this.settings.awsAccessKeyId,
+        secretAccessKey: this.settings.awsSecretAccessKey,
+        region: this.settings.awsRegion,
+        chatController: this,
+        streamCallback,
+      });
     } else {
       apiKey = this.settings.apiKey;
       baseUrl = this.settings.baseUrl;
@@ -307,8 +326,6 @@ class ChatController {
     document.getElementById('retry_button').setAttribute('hidden', true);
     document.getElementById('approval_buttons').setAttribute('hidden', true);
     document.getElementById('messageInput').disabled = false;
-    this.chat.renderTask();
-    document.getElementById('messageInput').setAttribute('placeholder', 'Provide task details...');
     this.stopProcess = false;
     this.usage = {
       input_tokens: 0,

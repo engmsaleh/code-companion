@@ -11,6 +11,8 @@ const MODEL_OPTIONS = [
     name: 'anthropic/claude-3.5-sonnet:beta',
   },
   { provider: 'OpenRouter', model: 'openai/gpt-4o-mini', name: 'openai/gpt-4o-mini' },
+  { provider: 'AWS', model: 'anthropic.claude-3-sonnet-20240229-v1:0', name: 'Claude v3 Sonnet (AWS Bedrock)' },
+  { provider: 'AWS', model: 'anthropic.claude-3-haiku-20240307-v1:0', name: 'Claude v3 Haiku (AWS Bedrock)' },
 ];
 
 const SMALL_MODEL_OPTIONS = [

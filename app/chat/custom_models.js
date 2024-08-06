@@ -70,6 +70,7 @@ class CustomModelsManager {
               <option value="OpenAI">OpenAI</option>
               <option value="Anthropic">Anthropic</option>
               <option value="OpenRouter">OpenRouter</option>
+              <option value="AWS">AWS Bedrock</option>
             </select>
           </div>
           <div class="col">

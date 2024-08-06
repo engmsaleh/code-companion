@@ -484,6 +484,33 @@
                     <div id="customModelsForm"></div>
                   </div>
                 </div>
+
+                <label for="awsAccessKeyId" class="form-label mt-3 fw-bolder">AWS Access Key ID:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="awsAccessKeyId"
+                  placeholder="AWS Access Key ID"
+                  onchange="chatController.saveSetting('awsAccessKeyId');"
+                />
+
+                <label for="awsSecretAccessKey" class="form-label mt-3 fw-bolder">AWS Secret Access Key:</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="awsSecretAccessKey"
+                  placeholder="AWS Secret Access Key"
+                  onchange="chatController.saveSetting('awsSecretAccessKey');"
+                />
+
+                <label for="awsRegion" class="form-label mt-3 fw-bolder">AWS Region:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="awsRegion"
+                  placeholder="e.g., us-east-1"
+                  onchange="chatController.saveSetting('awsRegion');"
+                />
               </div>
 
               <div

@@ -6,6 +6,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "electron . --dev",
     "debug": "cross-env NODE_ENV=development electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
@@ -69,6 +70,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
     "@aptabase/electron": "^0.3.1",
+    "@aws-sdk/client-bedrock-runtime": "^3.624.0",
     "@electron/notarize": "^2.3.0",
     "@langchain/openai": "^0.0.12",
     "@mozilla/readability": "^0.5.0",
@@ -112,12 +114,12 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "aws-sdk": "^2.1415.0",
     "cross-env": "^7.0.3",
     "dotenv": "^16.3.1",
     "electron": "^27.3.0",
     "electron-builder": "^23.6.0",
     "electron-notarize": "^1.2.2",
+    "electron-reload": "^2.0.0-alpha.1",
     "node-gyp": "^10.0.1",
     "prettier": "^3.0.1"
   }

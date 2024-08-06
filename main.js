@@ -29,6 +29,12 @@ let isUpdateInProgress = false;
 let terminal;
 let windowManager;
 
+const isDev = process.argv.includes('--dev');
+
+if (isDev) {
+  require('electron-reload')(__dirname);
+}
+
 if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
   setTimeout(() => {
     win.webContents.openDevTools();
@@ -107,6 +113,10 @@ function createWindow() {
     },
   });
   win.loadFile('index.html');
+
+  if (isDev) {
+    win.webContents.openDevTools();
+  }
 
   // Initialize WindowManager
   windowManager = new WindowManager(win);
