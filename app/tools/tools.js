@@ -492,17 +492,17 @@ function respondTargetFileNotProvided() {
   return 'Please provide a target file name in a correct format.';
 }
 
-function getEnabledTools(filterFn) {
-  const shellType = chatController.terminalSession.shellType;
-  return toolDefinitions.filter(filterFn).map(({ name, description, parameters }) => ({
+function getEnabledTools(filterFn, shellType) {
+  return toolDefinitions.filter(filterFn).map(({ name, description, parameters, executeFunction }) => ({
     name,
     description: description.replace('{shellType}', shellType),
     parameters,
+    func: executeFunction,
   }));
 }
 
-function allEnabledTools() {
-  return getEnabledTools((tool) => tool.enabled);
+function allEnabledTools(shellType) {
+  return getEnabledTools((tool) => tool.enabled, shellType);
 }
 
 function planningTools() {
@@ -512,6 +512,7 @@ function planningTools() {
     name: taskPlanningDoneTool.name,
     description: taskPlanningDoneTool.description,
     parameters: taskPlanningDoneTool.parameters,
+    func: taskPlanningDoneTool.executeFunction,
   });
 
   return tools;

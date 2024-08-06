@@ -66,6 +66,8 @@ class ChatController {
     this.model = null;
     this.smallModel = null;
     this.abortController = new AbortController();
+    const shellType = this.terminalSession ? this.terminalSession.shellType : 'bash'; // Default to 'bash' if terminalSession is not available
+    this.tools = allEnabledTools(shellType);
     this.model = this.createModel(this.settings.selectedModel, (snapshot) => {
       this.chat.updateStreamingMessage(snapshot);
     });
@@ -106,6 +108,7 @@ class ChatController {
         region: this.settings.awsRegion,
         chatController: this,
         streamCallback,
+        tools: this.tools, // Pass the tools here
       });
     } else {
       apiKey = this.settings.apiKey;
