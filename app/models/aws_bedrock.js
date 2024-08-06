@@ -38,8 +38,13 @@ class AWSBedrockModel {
       const response = await this.client.send(command);
       const responseBody = JSON.parse(new TextDecoder().decode(response.body));
       console.log('Received response from AWS Bedrock:', JSON.stringify(responseBody, null, 2));
+
+      const content = responseBody.content[0].text;
+      const toolCalls = this.extractToolCalls(content);
+
       return {
-        content: responseBody.content[0].text,
+        content: content,
+        tool_calls: toolCalls,
         usage: {
           input_tokens: responseBody.usage.input_tokens,
           output_tokens: responseBody.usage.output_tokens,
@@ -53,6 +58,24 @@ class AWSBedrockModel {
       }
       throw error;
     }
+  }
+
+  extractToolCalls(content) {
+    const toolCallRegex = /run_shell_command:\s*([\s\S]*?)(?=\n\n|$)/g;
+    const toolCalls = [];
+    let match;
+
+    while ((match = toolCallRegex.exec(content)) !== null) {
+      toolCalls.push({
+        type: 'function',
+        function: {
+          name: 'run_shell_command',
+          arguments: JSON.stringify({ command: match[1].trim() })
+        }
+      });
+    }
+
+    return toolCalls.length > 0 ? toolCalls : null;
   }
 
   formatMessages(messages) {

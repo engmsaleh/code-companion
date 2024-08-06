@@ -26,25 +26,32 @@ class Agent {
       chatController.chat.addBackendMessage('assistant', apiResponseMessage.content, toolCalls);
 
       if (toolCalls && toolCalls.length > 0) {
+        console.log('Tool calls received:', toolCalls);
         const { decision, reflectMessage } = await this.runTools(toolCalls);
         this.userDecision = null;
 
         if (decision !== 'reject') {
           await chatController.process('', false, reflectMessage);
         }
+      } else {
+        console.log('No tool calls received');
       }
     } catch (error) {
+      console.error('Error in runAgent:', error);
       chatController.handleError(error);
     }
   }
 
   async runTools(toolCalls) {
     let isUserRejected = false;
+    console.log('Running tools:', toolCalls);
 
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
+      console.log('Processing tool call:', functionName);
       const allowedToExecute = await this.isToolAllowedToExecute(toolCall);
       if (allowedToExecute === false) {
+        console.log('Tool not allowed to execute:', functionName);
         continue;
       }
 
@@ -53,6 +60,7 @@ class Agent {
       this.lastToolCall = toolCall;
 
       if (decision === 'approve') {
+        console.log('Tool call approved:', functionName);
         const functionCallResult = await this.callFunction(toolCall);
         if (functionCallResult) {
           chatController.chat.addBackendMessage('tool', functionCallResult, null, functionName, toolCall.id);
@@ -60,6 +68,7 @@ class Agent {
           viewController.updateLoadingIndicator(false);
         }
       } else if (decision === 'reject') {
+        console.log('Tool call rejected:', functionName);
         isUserRejected = true;
         chatController.chat.addFrontendMessage(
           'error',
@@ -74,6 +83,7 @@ class Agent {
         );
         return { decision: 'reject', reflectMessage: null };
       } else if (decision === 'reflect') {
+        console.log('Tool call needs reflection:', functionName);
         return { decision: 'reflect', reflectMessage: toolCall };
       }
     }
