@@ -17,34 +17,87 @@ class AWSBedrockModel {
   }
 
   async call({ messages, model, tools = null, temperature = 0.0 }) {
-    console.log('Input messages:', JSON.stringify(messages, null, 2));
-    const formattedMessages = this.formatMessages(messages);
-    console.log('Formatted messages:', JSON.stringify(formattedMessages, null, 2));
+    try {
+      console.log('Starting call method');
+      let formattedMessages = this.formatMessages(messages);
+      const toolConfig = this.formatToolConfig(tools || this.tools);
+      let response;
+      let continueCoding = true;
+      let chatOutput = '';
 
-    const toolConfig = this.formatToolConfig(tools || this.tools);
-    let response = await this.makeConverseCall(formattedMessages, model, toolConfig, temperature);
+      while (continueCoding) {
+        console.log('Entering while loop');
+        response = await this.makeConverseCall(formattedMessages, model, toolConfig, temperature);
+        console.log('Raw response from makeConverseCall:', JSON.stringify(response, null, 2));
 
-    console.log('Raw response from makeConverseCall:', JSON.stringify(response, null, 2));
+        const formattedResponse = this.formatResponse(response);
 
-    while (response.stop_reason === 'tool_use') {
-      const toolUse = response.content.find(item => item.type === 'tool_use');
-      if (!toolUse) {
-        console.error('Tool use requested but no tool_use content found');
-        break;
+        if (formattedResponse.tool_calls && formattedResponse.tool_calls.length > 0) {
+          console.log('Tool use detected');
+          for (const toolCall of formattedResponse.tool_calls) {
+            try {
+              const toolResult = await this.handleToolUse(toolCall.function);
+              chatOutput += `Tool used: ${toolResult.tool_name}\n`;
+              chatOutput += `Result: ${JSON.stringify(toolResult.tool_output, null, 2)}\n\n`;
+              formattedMessages.push({
+                role: 'assistant',
+                content: [{ type: 'text', text: JSON.stringify(toolResult) }]
+              });
+            } catch (error) {
+              console.error('Error handling tool use:', error);
+              chatOutput += `Error executing tool: ${error.message}\n\n`;
+              formattedMessages.push({
+                role: 'assistant',
+                content: [{ type: 'text', text: `Error executing tool: ${error.message}` }]
+              });
+            }
+          }
+          formattedMessages.push({
+            role: 'user',
+            content: [{ type: 'text', text: 'The tool has been executed. Please continue based on the tool result.' }]
+          });
+        } else {
+          console.log('Processing non-tool response');
+          chatOutput += formattedResponse.content + '\n\n';
+          formattedMessages.push({
+            role: 'assistant',
+            content: [{ type: 'text', text: formattedResponse.content }]
+          });
+
+          continueCoding = !this.isCodeComplete(response);
+
+          if (continueCoding) {
+            formattedMessages.push({
+              role: 'user',
+              content: [{ type: 'text', text: 'Please continue the implementation. If you need to create, edit, or run any code, please use the appropriate tools.' }]
+            });
+          } else {
+            return { ...formattedResponse, content: chatOutput };
+          }
+        }
+
+        // Return the current chatOutput after each iteration
+        return { ...formattedResponse, content: chatOutput };
       }
-      const toolResult = await this.handleToolUse(toolUse);
-      formattedMessages.push({
-        role: 'assistant',
-        content: [{ type: 'text', text: JSON.stringify(toolResult) }]
-      });
-      formattedMessages.push({
-        role: 'user',
-        content: [{ type: 'text', text: 'Please continue based on the tool result.' }]
-      });
-      response = await this.makeConverseCall(formattedMessages, model, toolConfig, temperature);
-    }
 
-    return this.formatResponse(response);
+      console.log('Exiting call method');
+      return { ...this.formatResponse(response), content: chatOutput };
+    } catch (error) {
+      console.error('Error in call method:', error);
+      return {
+        content: 'An error occurred while processing your request.',
+        tool_calls: [],
+        usage: { input_tokens: 0, output_tokens: 0 },
+      };
+    }
+  }
+
+  // Add this method to check if the coding is complete
+  isCodeComplete(response) {
+    // Implement your logic to determine if the coding is complete
+    // For example, you could check for a specific phrase in the response
+    const content = response.content.find(item => item.type === 'text')?.text || '';
+    return content.toLowerCase().includes('coding complete') || content.toLowerCase().includes('implementation finished');
   }
 
   async makeConverseCall(messages, model, toolConfig, temperature) {
@@ -88,24 +141,49 @@ class AWSBedrockModel {
   }
 
   async handleToolUse(toolUse) {
-    const tool = this.tools.find((t) => t.name === toolUse.name);
-    if (!tool) {
-      console.error(`Tool not found: ${toolUse.name}`);
-      throw new Error(`Tool not found: ${toolUse.name}`);
+    console.log('Handling tool use:', JSON.stringify(toolUse, null, 2));
+    
+    if (!toolUse || typeof toolUse !== 'object') {
+      console.error('Invalid toolUse object:', toolUse);
+      throw new Error('Invalid toolUse object');
     }
 
+    const { name, arguments: argsString } = toolUse;
+    
+    if (!name) {
+      console.error('Tool name is missing');
+      throw new Error('Tool name is missing');
+    }
+
+    const tool = this.tools.find((t) => t.name === name);
+    if (!tool) {
+      console.error(`Tool not found: ${name}`);
+      throw new Error(`Tool not found: ${name}`);
+    }
+
+    let args;
     try {
-      const result = await tool.func(toolUse.input);
+      args = JSON.parse(argsString);
+    } catch (error) {
+      console.error('Failed to parse tool arguments:', argsString);
+      throw new Error('Failed to parse tool arguments');
+    }
+
+    console.log('Executing tool:', name);
+    console.log('Tool arguments:', JSON.stringify(args, null, 2));
+
+    try {
+      const result = await tool.func(args);
       return {
-        tool_name: toolUse.name,
-        tool_input: toolUse.input,
+        tool_name: name,
+        tool_input: args,
         tool_output: result
       };
     } catch (error) {
       console.error('Error executing tool:', error);
       return {
-        tool_name: toolUse.name,
-        tool_input: toolUse.input,
+        tool_name: name,
+        tool_input: args,
         tool_output: `Error: ${error.message}`,
         status: 'error'
       };
@@ -189,3 +267,32 @@ class AWSBedrockModel {
 }
 
 module.exports = AWSBedrockModel;
+
+async function processConversation(messages) {
+  let allResponses = '';
+  let isComplete = false;
+
+  while (!isComplete) {
+    const response = await awsBedrockModel.call({ messages });
+    allResponses += response.content;
+    
+    // Output the current response to the chat window
+    outputToChat(response.content);
+
+    // Check if the conversation is complete
+    isComplete = awsBedrockModel.isCodeComplete(response);
+
+    if (!isComplete) {
+      // Add the model's response and a new user message to continue the conversation
+      messages.push({ role: 'assistant', content: response.content });
+      messages.push({ role: 'user', content: 'Please continue the implementation.' });
+    }
+  }
+
+  return allResponses;
+}
+
+function outputToChat(content) {
+  // Implement this function to update your chat window with the new content
+  console.log(content);  // For example, logging to console
+}
