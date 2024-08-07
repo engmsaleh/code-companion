@@ -37,8 +37,7 @@ class AWSBedrockModel {
           for (const toolCall of formattedResponse.tool_calls) {
             try {
               const toolResult = await this.handleToolUse(toolCall.function);
-              chatOutput += `Tool used: ${toolResult.tool_name}\n`;
-              chatOutput += `Result: ${JSON.stringify(toolResult.tool_output, null, 2)}\n\n`;
+              chatOutput += this.formatToolOutput(toolResult);
               formattedMessages.push({
                 role: 'assistant',
                 content: [{ type: 'text', text: JSON.stringify(toolResult) }]
@@ -258,6 +257,37 @@ class AWSBedrockModel {
     }
 
     return formattedMessages;
+  }
+
+  formatToolOutput(toolResult) {
+    let output = `### 🛠️ Tool Used: ${toolResult.tool_name}\n\n`;
+
+    if (toolResult.tool_name === 'run_shell_command') {
+      const commandOutput = toolResult.tool_output.replace(/^\s*'|'\s*$/g, '');
+      const lines = commandOutput.split('\n');
+      const command = lines[0].replace('Command executed: ', '').trim();
+      output += `**Command:**\n\`\`\`bash\n${command}\n\`\`\`\n`;
+
+      // Filter and format the command output
+      const relevantOutput = lines.slice(1)
+        .filter(line => !line.startsWith('➜') && !line.startsWith('Progress:') && !line.includes('WARN'))
+        .join('\n')
+        .trim();
+
+      if (relevantOutput) {
+        output += "**Output:**\n```\n" + relevantOutput + "\n```\n";
+      } else {
+        output += "✅ Command executed successfully.\n";
+      }
+    } else if (toolResult.tool_name === 'create_or_overwrite_file') {
+      const { targetFile, createText } = toolResult.tool_input;
+      output += `**File:** \`${targetFile}\`\n\n`;
+      output += "**Content:**\n```typescript\n" + createText + "\n```\n";
+    } else {
+      output += `**Result:**\n\`\`\`json\n${JSON.stringify(toolResult.tool_output, null, 2)}\n\`\`\`\n`;
+    }
+
+    return output + '\n---\n\n';
   }
 
   abort() {
