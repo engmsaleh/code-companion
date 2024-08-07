@@ -158,36 +158,35 @@ const toolDefinitions = [
 async function previewMessageMapping(functionName, args) {
   let codeDiff = '';
   let fileLink = '';
-  let browserMessage = '';
 
   if (functionName === 'create_or_overwrite_file') {
     const newFile = await normalizedFilePath(args.targetFile);
     if (fs.existsSync(newFile)) {
       const oldContent = fs.readFileSync(newFile, 'utf8');
       codeDiff = generateDiff(oldContent, args.createText, newFile, newFile);
+    } else {
+      codeDiff = generateDiff('', args.createText, '/dev/null', newFile);
     }
+    fileLink = await openFileLink(args.targetFile);
   }
 
   if (functionName === 'replace_code') {
     const { newContent, oldContent } = await codeAfterReplace(args);
     codeDiff = generateDiff(oldContent, newContent, args.targetFile, args.targetFile);
-  }
-
-  if (args.targetFile) {
     fileLink = await openFileLink(args.targetFile);
   }
 
   const mapping = {
     browser: {
-      message: '',
-      code: '',
+      message: 'Opening in browser:',
+      code: `\n\`\`\`\n${args.url}\n\`\`\``,
     },
     create_or_overwrite_file: {
-      message: `Creating a file ${args.targetFile}`,
-      code: codeDiff ? `\n\`\`\`diff\n${codeDiff}\n\`\`\`` : `\n\`\`\`${args.createText}\n\`\`\``,
+      message: `${fs.existsSync(args.targetFile) ? 'Updating' : 'Creating'} file ${fileLink}:`,
+      code: `\n\`\`\`diff\n${codeDiff}\n\`\`\``,
     },
     read_file: {
-      message: '',
+      message: `Reading file ${fileLink}`,
       code: '',
     },
     replace_code: {
@@ -196,18 +195,15 @@ async function previewMessageMapping(functionName, args) {
     },
     run_shell_command: {
       message: 'Executing shell command:',
-      code: `\n\n\`\`\`console\n${args.command}\n\`\`\``,
+      code: `\n\`\`\`console\n${args.command}\n\`\`\``,
     },
     search: {
-      message: `Searching ${args.type} for '${args.query}'`,
-      code: '',
-    },
-    task_planning_done: {
-      message: 'Task planning is done.',
+      message: `Performing ${args.type} search for: "${args.query}"`,
       code: '',
     },
   };
-  return mapping[functionName];
+
+  return mapping[functionName] || { message: '', code: '' };
 }
 
 function taskPlanningDone() {
@@ -264,18 +260,31 @@ async function replaceInFile({ targetFile, startLineNumber, endLineNumber, repla
     return invalidRangeMessage;
   }
 
-  const { newContent, oldContent } = await codeAfterReplace({
-    targetFile,
-    startLineNumber,
-    endLineNumber,
-    replaceWith,
-  });
-  const codeDiff = generateDiff(oldContent, newContent, filePath, filePath);
-  fs.writeFileSync(filePath, newContent);
-  const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
-  chatController.chat.addFrontendMessage('function', successMessage);
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  const lines = fileContent.split('\n');
+  const originalContent = lines.slice(startLineNumber - 1, endLineNumber).join('\n');
+  
+  const diff = generateDiff(originalContent, replaceWith);
+  
+  chatController.chat.addFrontendMessage('function', `Diff preview for ${await openFileLink(filePath)}:\n${diff}`);
 
-  return `File ${filePath} updated successfully.\n<changes_made_to_file>${codeDiff}</changes_made_to_file>`;
+  return {
+    diff,
+    
+    async applyChanges() {
+      const { newContent } = await codeAfterReplace({
+        targetFile,
+        startLineNumber,
+        endLineNumber,
+        replaceWith,
+      });
+      fs.writeFileSync(filePath, newContent);
+      const successMessage = `File ${await openFileLink(filePath)} updated successfully.`;
+      chatController.chat.addFrontendMessage('function', successMessage);
+
+      return `File ${filePath} updated successfully.\n<changes_made_to_file>${diff}</changes_made_to_file>`;
+    }
+  };
 }
 
 async function codeAfterReplace({ targetFile, startLineNumber, endLineNumber, replaceWith }) {
